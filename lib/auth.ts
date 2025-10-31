@@ -36,6 +36,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             role: user.role,
+            phone: user.phone || undefined,
           }
         } catch (error) {
           console.error("[v0] Authorization error:", error)
@@ -45,17 +46,53 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
+        token.email = user.email || ""
+        token.name = user.name || ""
         token.role = (user as any).role
+        token.phone = (user as any).phone
+        // Don't store image in token to avoid large cookie size
       }
+      
+      // Handle session update - refresh user data from database
+      if (trigger === "update") {
+        const updatedUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+          },
+        })
+        
+        if (updatedUser) {
+          token.name = updatedUser.name
+          token.email = updatedUser.email
+          token.phone = updatedUser.phone
+          token.role = updatedUser.role
+        }
+      }
+      
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
+        session.user.name = token.name as string
+        session.user.email = token.email as string
         session.user.role = token.role as string
+        ;(session.user as any).phone = token.phone
+        
+        // Fetch image from database separately to avoid large cookie
+        const user = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { image: true },
+        })
+        session.user.image = user?.image || null
       }
       return session
     },

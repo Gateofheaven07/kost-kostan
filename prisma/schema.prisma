@@ -16,6 +16,7 @@ model User {
   email         String     @unique
   passwordHash  String
   phone         String?
+  image         String?    // Profile photo URL or base64
   role          String     @default("USER") // "ADMIN" or "USER"
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt

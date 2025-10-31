@@ -18,6 +18,7 @@ export default function SignInPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
   })
 
@@ -68,6 +69,7 @@ export default function SignInPage() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          phone: formData.phone,
           password: formData.password,
         }),
       })
@@ -78,7 +80,7 @@ export default function SignInPage() {
           description: "Akun berhasil dibuat. Silakan login.",
         })
         setIsSignUp(false)
-        setFormData({ name: "", email: "", password: "" })
+        setFormData({ name: "", email: "", phone: "", password: "" })
       } else {
         const data = await response.json()
         toast({
@@ -108,16 +110,29 @@ export default function SignInPage() {
         <CardContent>
           <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
             {isSignUp && (
-              <div>
-                <label className="text-sm font-medium mb-2 block">Nama</label>
-                <Input
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Nama Anda"
-                  required={isSignUp}
-                />
-              </div>
+              <>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Nama</label>
+                  <Input
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Nama Anda"
+                    required={isSignUp}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Nomor Telepon</label>
+                  <Input
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="+62 812-3456-7890"
+                  />
+                </div>
+              </>
             )}
 
             <div>

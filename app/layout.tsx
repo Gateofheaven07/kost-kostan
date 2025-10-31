@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { SessionProvider } from "next-auth/react"
 import "./globals.css"
 import { Provider } from "./provider"
+import { Toaster } from "@/components/ui/toaster"
 
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="id">
       <body className={`font-sans antialiased`}>
         <Provider>{children}</Provider>
+        <Toaster />
         <Analytics />
       </body>
     </html>

@@ -6,13 +6,14 @@ import { z } from "zod"
 const registerSchema = z.object({
   name: z.string().min(2, "Nama minimal 2 karakter"),
   email: z.string().email("Email tidak valid"),
+  phone: z.string().optional(),
   password: z.string().min(6, "Password minimal 6 karakter"),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, password } = registerSchema.parse(body)
+    const { name, email, phone, password } = registerSchema.parse(body)
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         email,
+        phone: phone || null,
         passwordHash,
         role: "USER",
       },

@@ -242,6 +242,18 @@ async function main() {
     }
   }
 
+  // Create Super Admin User
+  const superAdminPassword = await bcrypt.hash("SuperAdmin123!", 10)
+  const superAdmin = await prisma.user.create({
+    data: {
+      name: "Super Administrator",
+      email: "superadmin@kost.test",
+      passwordHash: superAdminPassword,
+      role: "SUPER_ADMIN",
+      phone: "+62 811-9999-9999",
+    },
+  })
+
   // Create Admin User
   const adminPassword = await bcrypt.hash("Admin123!", 10)
   const admin = await prisma.user.create({
@@ -311,6 +323,9 @@ async function main() {
   }
 
   console.log("✅ Seeding berhasil!")
+  console.log("\n👑 Akun Super Admin:")
+  console.log("   Email: superadmin@kost.test")
+  console.log("   Password: SuperAdmin123!")
   console.log("\n📝 Akun Admin:")
   console.log("   Email: admin@kost.test")
   console.log("   Password: Admin123!")
