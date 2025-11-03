@@ -12,7 +12,7 @@ import {
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Menu, User, History, LogOut, LayoutDashboard, Building2 } from "lucide-react"
+import { Menu, User, History, LogOut, LayoutDashboard, Building2, ChevronDown, Globe, ArrowRight } from "lucide-react"
 import { useState } from "react"
 
 export function Navbar() {
@@ -30,51 +30,70 @@ export function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background shadow-sm">
+    <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 relative">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <Building2 className="h-6 w-6 text-primary transition-transform group-hover:scale-110" />
-            <span className="font-bold text-xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Kost
+          <Link href="/" className="flex items-center">
+            <span className="font-bold text-xl text-gray-900">
+              Aka KOST
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex gap-8 items-center">
+          {/* Desktop Navigation - Center dengan titik pemisah */}
+          <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
             <Link 
               href="/rooms" 
-              className="text-sm font-medium transition-colors hover:text-primary relative group"
+              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors px-3 py-2 flex items-center gap-1 group"
             >
-              Lihat Kamar
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+              Kamar
+              <ChevronDown className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
             </Link>
+            <span className="text-gray-400 text-xs">•</span>
             <Link 
               href="/about" 
-              className="text-sm font-medium transition-colors hover:text-primary relative group"
+              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors px-3 py-2 flex items-center gap-1 group"
             >
               Tentang
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+              <ChevronDown className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
             </Link>
+            <span className="text-gray-400 text-xs">•</span>
             <Link 
               href="/contact" 
-              className="text-sm font-medium transition-colors hover:text-primary relative group"
+              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors px-3 py-2 flex items-center gap-1 group"
             >
               Kontak
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
+              <ChevronDown className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
             </Link>
+            {session && (
+              <>
+                <span className="text-gray-400 text-xs">•</span>
+                <Link 
+                  href="/bookings" 
+                  className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors px-3 py-2 flex items-center gap-1 group"
+                >
+                  Booking
+                  <ChevronDown className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              </>
+            )}
+          </div>
 
+          {/* Right Side - Globe & Auth */}
+          <div className="hidden md:flex items-center gap-3">
+            <button className="text-gray-700 hover:text-gray-900 p-2 transition-colors">
+              <Globe className="h-5 w-5" />
+            </button>
             {session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button 
                     type="button"
-                    className="relative h-10 w-10 rounded-full hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    className="relative h-10 w-10 rounded-full hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
                   >
-                    <Avatar className="h-10 w-10 border-2 border-primary/20 transition-all hover:border-primary">
+                    <Avatar className="h-10 w-10 border-2 border-gray-200 transition-all hover:border-gray-300">
                       <AvatarImage src={session.user?.image || ""} alt={session.user?.name || ""} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                      <AvatarFallback className="bg-gray-100 text-gray-900 font-semibold">
                         {getInitials(session.user?.name)}
                       </AvatarFallback>
                     </Avatar>
@@ -84,7 +103,7 @@ export function Navbar() {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">{session.user?.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
+                      <p className="text-xs leading-none text-gray-500">
                         {session.user?.email}
                       </p>
                     </div>
@@ -125,8 +144,9 @@ export function Navbar() {
               </DropdownMenu>
             ) : (
               <Link href="/auth/signin">
-                <Button className="rounded-full px-6 shadow-lg hover:shadow-xl transition-all">
+                <Button className="bg-gray-900 text-white hover:bg-gray-800 rounded-md px-6 h-9 text-sm font-medium flex items-center gap-2">
                   Masuk
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
             )}

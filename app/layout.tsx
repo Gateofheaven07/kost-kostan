@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 
 
 export const metadata: Metadata = {
-  title: "Kost Management",
+  title: "Aka Kost",
   description: "Platform manajemen kost terpadu",
   generator: "v0.app",
 }

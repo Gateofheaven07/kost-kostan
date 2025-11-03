@@ -23,9 +23,9 @@ export async function POST() {
     console.log("[v0] Creating kost...")
     const kost = await prisma.kost.create({
       data: {
-        name: "Kost Nyaman Bandung",
-        address: "Jl. Raya Bandung No. 123",
-        city: "Bandung",
+        name: "Aka Kost",
+        address: "Jl. Babakan Lio No.11, Bogor",
+        city: "Bogor",
         description:
           "Kost nyaman dengan lokasi strategis di pusat kota Bandung. Dekat dengan kampus, mall, dan transportasi umum. Fasilitas lengkap dan pengelola yang ramah.",
         rules:
@@ -43,7 +43,7 @@ export async function POST() {
     const owner = await prisma.owner.create({
       data: {
         name: "Ibu Siti Nurhaliza",
-        photoUrl: "/professional-woman-portrait.png",
+        photoUrl: "/profile_kost.png",
         bio: "Pemilik kost berpengalaman lebih dari 10 tahun. Berkomitmen memberikan pelayanan terbaik untuk kenyamanan penghuni.",
         phone: "+62 812-3456-7890",
         email: "siti@kostnyanambandung.com",

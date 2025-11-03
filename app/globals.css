@@ -19,7 +19,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -37,6 +37,9 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Red accent color seperti desain referensi */
+  --accent-red: oklch(0.577 0.245 27.325);
+  --accent-red-foreground: oklch(1 0 0);
 }
 
 .dark {
@@ -122,4 +125,24 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Auto-scrolling marquee animation */
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: scroll 60s linear infinite;
+  display: flex;
+  width: fit-content;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
 }
