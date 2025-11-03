@@ -36,7 +36,7 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <span className="font-bold text-xl text-gray-900">
-              Aka KOST
+              AKA KOST
             </span>
           </Link>
 

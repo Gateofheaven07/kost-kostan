@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -30,6 +29,8 @@ export default function BookingPage() {
   const [room, setRoom] = useState<Room | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [paymentProcessing, setPaymentProcessing] = useState(false)
+  const [snapLoaded, setSnapLoaded] = useState(false)
 
   const [formData, setFormData] = useState({
     period: "MONTH",
@@ -47,6 +48,51 @@ export default function BookingPage() {
       router.push("/rooms")
       return
     }
+
+    // Load Midtrans Snap script dynamically
+    const loadMidtransScript = () => {
+      if (typeof window === "undefined") return
+
+      // Check if script already loaded
+      if ((window as any).snap) {
+        setSnapLoaded(true)
+        return
+      }
+
+      // Check if script tag already exists
+      const existingScript = document.querySelector('script[src*="midtrans.com/snap/snap.js"]')
+      if (existingScript) {
+        // Wait a bit for script to initialize
+        const checkSnap = setInterval(() => {
+          if ((window as any).snap) {
+            setSnapLoaded(true)
+            clearInterval(checkSnap)
+          }
+        }, 100)
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          clearInterval(checkSnap)
+        }, 5000)
+        return
+      }
+
+      // Create and load script
+      const script = document.createElement("script")
+      script.src = "https://app.sandbox.midtrans.com/snap/snap.js"
+      script.setAttribute("data-client-key", "Mid-client-6ynAvOYFntPXk6wC")
+      script.async = true
+      script.onload = () => {
+        console.log("Midtrans Snap script loaded")
+        setSnapLoaded(true)
+      }
+      script.onerror = () => {
+        console.error("Failed to load Midtrans Snap script")
+      }
+      document.head.appendChild(script)
+    }
+
+    loadMidtransScript()
 
     const fetchRoom = async () => {
       try {
@@ -104,7 +150,8 @@ export default function BookingPage() {
       const endDate = calculateEndDate(formData.startDate, formData.period)
       const totalPrice = getTotalPrice()
 
-      const response = await fetch("/api/bookings", {
+      // Create booking first
+      const bookingResponse = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -117,18 +164,110 @@ export default function BookingPage() {
         }),
       })
 
-      if (response.ok) {
-        const booking = await response.json()
-        toast({
-          title: "Berhasil",
-          description: "Booking berhasil dibuat. Silakan tunggu konfirmasi dari admin.",
-        })
-        router.push(`/bookings/${booking.id}`)
-      } else {
-        const data = await response.json()
+      if (!bookingResponse.ok) {
+        const data = await bookingResponse.json()
         toast({
           title: "Error",
           description: data.error || "Gagal membuat booking",
+          variant: "destructive",
+        })
+        setSubmitting(false)
+        return
+      }
+
+      const booking = await bookingResponse.json()
+
+      // Create payment token
+      setPaymentProcessing(true)
+      const paymentResponse = await fetch("/api/payments/create-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      })
+
+      if (!paymentResponse.ok) {
+        const data = await paymentResponse.json()
+        toast({
+          title: "Error",
+          description: data.error || "Gagal membuat token pembayaran",
+          variant: "destructive",
+        })
+        setPaymentProcessing(false)
+        setSubmitting(false)
+        return
+      }
+
+      const { token } = await paymentResponse.json()
+
+      // Wait for Midtrans Snap script to be loaded
+      const waitForSnap = (): Promise<void> => {
+        return new Promise((resolve, reject) => {
+          if (typeof window === "undefined") {
+            reject(new Error("Window is not defined"))
+            return
+          }
+
+          // Check if snap is already available
+          if ((window as any).snap && typeof (window as any).snap.pay === "function") {
+            resolve()
+            return
+          }
+
+          // Wait for snap to be loaded (max 10 seconds)
+          let attempts = 0
+          const maxAttempts = 100
+          const checkInterval = setInterval(() => {
+            attempts++
+            if ((window as any).snap && typeof (window as any).snap.pay === "function") {
+              clearInterval(checkInterval)
+              resolve()
+            } else if (attempts >= maxAttempts) {
+              clearInterval(checkInterval)
+              reject(new Error("Midtrans Snap script gagal dimuat. Silakan refresh halaman dan coba lagi."))
+            }
+          }, 100)
+        })
+      }
+
+      try {
+        // Wait for Snap script to be ready
+        await waitForSnap()
+
+        // Open Midtrans payment popup immediately - NO ADMIN CONFIRMATION NEEDED
+        ;(window as any).snap.pay(token, {
+          onSuccess: function (result: any) {
+            toast({
+              title: "Pembayaran Berhasil",
+              description: "Terima kasih! Pembayaran Anda berhasil diproses.",
+            })
+            router.push(`/bookings/${booking.id}`)
+          },
+          onPending: function (result: any) {
+            toast({
+              title: "Pembayaran Pending",
+              description: "Pembayaran Anda sedang diproses. Silakan selesaikan pembayaran.",
+            })
+            router.push(`/bookings/${booking.id}`)
+          },
+          onError: function (result: any) {
+            toast({
+              title: "Pembayaran Gagal",
+              description: "Pembayaran gagal diproses. Silakan coba lagi.",
+              variant: "destructive",
+            })
+          },
+          onClose: function () {
+            toast({
+              title: "Pembayaran Dibatalkan",
+              description: "Anda menutup popup pembayaran.",
+            })
+          },
+        })
+      } catch (snapError: any) {
+        console.error("Error opening Midtrans popup:", snapError)
+        toast({
+          title: "Error",
+          description: snapError.message || "Gagal membuka popup pembayaran. Silakan refresh halaman dan coba lagi.",
           variant: "destructive",
         })
       }
@@ -140,6 +279,7 @@ export default function BookingPage() {
       })
     } finally {
       setSubmitting(false)
+      setPaymentProcessing(false)
     }
   }
 
@@ -176,32 +316,34 @@ export default function BookingPage() {
 
   return (
     <>
+      {/* Midtrans Snap.js Script - Loaded dynamically in useEffect */}
+
       <Navbar />
-      <main className="min-h-screen">
+      <main className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold mb-8">Pesan Kamar</h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Detail Booking</CardTitle>
+              <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl rounded-2xl">
+                <CardHeader className="bg-gradient-to-br from-red-50 via-white to-white pb-6">
+                  <CardTitle className="text-2xl font-bold text-gray-900">Detail Booking</CardTitle>
                   <CardDescription>Isi informasi booking Anda</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6">
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Kamar</label>
-                      <Input value={room.name} disabled />
+                      <label className="text-sm font-semibold text-gray-700 mb-2 block">Kamar</label>
+                      <Input value={room.name} disabled className="h-12 border-2 border-gray-200 rounded-xl" />
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Periode Sewa</label>
+                      <label className="text-sm font-semibold text-gray-700 mb-2 block">Periode Sewa</label>
                       <Select
                         value={formData.period}
                         onValueChange={(value) => setFormData({ ...formData, period: value })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 border-2 border-gray-200 rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -215,29 +357,36 @@ export default function BookingPage() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Tanggal Mulai</label>
+                      <label className="text-sm font-semibold text-gray-700 mb-2 block">Tanggal Mulai</label>
                       <Input
                         type="date"
                         value={formData.startDate}
                         onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                         min={new Date().toISOString().split("T")[0]}
                         required
+                        className="h-12 border-2 border-gray-200 rounded-xl"
                       />
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Catatan (Opsional)</label>
+                      <label className="text-sm font-semibold text-gray-700 mb-2 block">Catatan (Opsional)</label>
                       <textarea
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         placeholder="Tulis catatan atau pertanyaan khusus..."
                         rows={4}
-                        className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 transition-all resize-none"
                       />
                     </div>
 
-                    <Button type="submit" className="w-full" disabled={submitting || !formData.startDate}>
-                      {submitting ? "Memproses..." : "Lanjutkan ke Pembayaran"}
+                    <Button
+                      type="submit"
+                      className="w-full h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+                      disabled={submitting || paymentProcessing || !formData.startDate}
+                    >
+                      {submitting || paymentProcessing
+                        ? "Memproses..."
+                        : "Lanjutkan ke Pembayaran"}
                     </Button>
                   </form>
                 </CardContent>
@@ -246,19 +395,19 @@ export default function BookingPage() {
 
             {/* Summary */}
             <div>
-              <Card className="sticky top-4">
-                <CardHeader>
-                  <CardTitle>Ringkasan Booking</CardTitle>
+              <Card className="sticky top-4 bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl rounded-2xl">
+                <CardHeader className="bg-gradient-to-br from-gray-50 to-white pb-6">
+                  <CardTitle className="text-xl font-bold text-gray-900">Ringkasan Booking</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-6 space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Kamar</p>
-                    <p className="font-bold">{room.name}</p>
+                    <p className="text-sm text-gray-600 mb-1">Kamar</p>
+                    <p className="font-bold text-gray-900">{room.name}</p>
                   </div>
 
                   <div>
-                    <p className="text-sm text-muted-foreground">Periode</p>
-                    <p className="font-bold">
+                    <p className="text-sm text-gray-600 mb-1">Periode</p>
+                    <p className="font-bold text-gray-900">
                       {formData.period === "WEEK"
                         ? "Mingguan"
                         : formData.period === "MONTH"
@@ -274,27 +423,37 @@ export default function BookingPage() {
                   {formData.startDate && (
                     <>
                       <div>
-                        <p className="text-sm text-muted-foreground">Tanggal Mulai</p>
-                        <p className="font-bold">{new Date(formData.startDate).toLocaleDateString("id-ID")}</p>
+                        <p className="text-sm text-gray-600 mb-1">Tanggal Mulai</p>
+                        <p className="font-bold text-gray-900">
+                          {new Date(formData.startDate).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </p>
                       </div>
 
                       <div>
-                        <p className="text-sm text-muted-foreground">Tanggal Selesai</p>
-                        <p className="font-bold">
-                          {calculateEndDate(formData.startDate, formData.period).toLocaleDateString("id-ID")}
+                        <p className="text-sm text-gray-600 mb-1">Tanggal Selesai</p>
+                        <p className="font-bold text-gray-900">
+                          {calculateEndDate(formData.startDate, formData.period).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
                         </p>
                       </div>
                     </>
                   )}
 
-                  <div className="border-t pt-4">
+                  <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Harga</span>
-                      <span className="font-bold">Rp {totalPrice.toLocaleString("id-ID")}</span>
+                      <span className="text-sm text-gray-600">Harga</span>
+                      <span className="font-bold text-gray-900">Rp {totalPrice.toLocaleString("id-ID")}</span>
                     </div>
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total</span>
-                      <span>Rp {totalPrice.toLocaleString("id-ID")}</span>
+                    <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
+                      <span className="text-gray-900">Total</span>
+                      <span className="text-red-600">Rp {totalPrice.toLocaleString("id-ID")}</span>
                     </div>
                   </div>
                 </CardContent>
