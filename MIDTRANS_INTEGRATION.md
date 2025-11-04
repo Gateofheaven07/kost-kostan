@@ -52,12 +52,65 @@ Endpoint ini akan menerima notification dari Midtrans dan otomatis update status
 2. Setelah booking dibuat, system akan:
    - Membuat payment record di database
    - Generate Snap token dari Midtrans
-   - Membuka popup payment Midtrans
+   - **Langsung membuka popup payment Midtrans** (tanpa konfirmasi admin)
 3. User menyelesaikan pembayaran di popup Midtrans
-4. Midtrans mengirim notification ke webhook
-5. System update status booking berdasarkan status pembayaran:
-   - `settlement` atau `capture` → Booking status menjadi `CONFIRMED`
-   - `cancel`, `expire`, atau `deny` → Booking status menjadi `CANCELLED`
+4. Midtrans mengirim notification ke webhook `/api/payments/notification`
+5. Webhook akan:
+   - Validasi signature dan data dari Midtrans
+   - Update payment status di database
+   - **Auto-update booking status** berdasarkan status pembayaran:
+     - `settlement` atau `capture` → Booking status menjadi `CONFIRMED` (otomatis, tanpa konfirmasi admin)
+     - `pending` → Booking tetap `PENDING` (menunggu pembayaran)
+     - `cancel`, `expire`, atau `deny` → Booking status menjadi `CANCELLED`
+
+## Webhook Configuration
+
+### Setup Webhook di Midtrans Dashboard
+
+1. **Login ke Midtrans Dashboard:**
+   - Sandbox: https://dashboard.sandbox.midtrans.com/
+   - Production: https://dashboard.midtrans.com/
+
+2. **Masuk ke Settings > Configuration:**
+   - Pilih tab "Notification URL"
+
+3. **Set Notification URL:**
+   ```
+   Sandbox: https://your-domain.com/api/payments/notification
+   Production: https://your-domain.com/api/payments/notification
+   ```
+
+4. **Save Configuration**
+
+### Webhook Endpoint Details
+
+**Endpoint:** `POST /api/payments/notification`
+
+**Request dari Midtrans:**
+- Content-Type: `application/json`
+- Method: `POST`
+- Body: JSON dengan data transaksi Midtrans
+
+**Response yang Dikembalikan:**
+- Status 200: `{ "status": "OK", "message": "Notification processed successfully" }`
+- Status 400: `{ "error": "Missing required fields" }`
+- Status 404: `{ "error": "Payment not found" }`
+- Status 500: `{ "error": "Gagal memproses notifikasi" }`
+
+**Validasi yang Dilakukan:**
+1. ✅ Validasi required fields (order_id, transaction_status, status_code, gross_amount)
+2. ✅ Validasi signature (untuk production - saat ini di-skip untuk sandbox)
+3. ✅ Mencari payment berdasarkan order_id
+4. ✅ Update payment status di database
+5. ✅ Auto-update booking status berdasarkan payment status
+
+**Status Payment yang Dihandle:**
+- `pending` - Pembayaran sedang menunggu
+- `settlement` - Pembayaran berhasil
+- `capture` - Pembayaran berhasil (credit card)
+- `cancel` - Pembayaran dibatalkan
+- `expire` - Pembayaran expired
+- `deny` - Pembayaran ditolak
 
 ## Testing di Sandbox
 
