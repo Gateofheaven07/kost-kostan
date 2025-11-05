@@ -23,7 +23,7 @@ async function main() {
       address: "Jl. Babakan Lio No.11, Bogor",
       city: "Bogor",
       description:
-        "Kost nyaman dengan lokasi strategis di pusat kota Bandung. Dekat dengan kampus, mall, dan transportasi umum. Fasilitas lengkap dan pengelola yang ramah.",
+        "Kost nyaman dengan lokasi strategis dekat pusat kota Bogor dan Universitas IPB, Aka Kost menawarkan hunian nyaman dengan fasilitas lengkap—kamar rapi, kamar mandi bersih, Wi-Fi cepat, area parkir, dapur bersama, serta keamanan terjaga. Akses mudah ke kampus, transportasi umum, dan pusat belanja membuat aktivitas harian lebih praktis. Semua kenyamanan ini hadir dengan harga terjangkau, cocok untuk mahasiswa maupun pekerja.",
       rules:
         "1. Jam malam pukul 22:00\n2. Tidak boleh membawa tamu lawan jenis ke kamar\n3. Menjaga kebersihan area umum\n4. Tidak boleh membuat keributan\n5. Bayar tepat waktu",
       facilities: JSON.stringify(["WiFi Gratis", "Listrik 24 Jam", "Air Panas", "Parkir Motor", "Keamanan 24 Jam"]),
@@ -37,11 +37,11 @@ async function main() {
   // Create Owner
   const owner = await prisma.owner.create({
     data: {
-      name: "Ibu Siti Nurhaliza",
+      name: "Ibu Hikmah",
       photoUrl: "/profile_kost.png",
       bio: "Pemilik kost berpengalaman lebih dari 10 tahun. Berkomitmen memberikan pelayanan terbaik untuk kenyamanan penghuni.",
       phone: "+62 812-3456-7890",
-      email: "siti@kostnyanambandung.com",
+      email: "hikmah@kostnyanambandung.com",
       socials: JSON.stringify({
         instagram: "@kostnyanambandung",
         facebook: "Kost Nyaman Bandung",
