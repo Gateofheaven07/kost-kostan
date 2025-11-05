@@ -82,7 +82,7 @@ export default function Home() {
                       </div>
                       <div className="pt-4 border-t border-gray-100">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-2xl font-bold text-red-600">Rp 2.500.000</span>
+                          <span className="text-2xl font-bold text-red-600">Rp 1.000.000</span>
                           <span className="text-xs text-gray-500">/bulan</span>
                         </div>
                       </div>

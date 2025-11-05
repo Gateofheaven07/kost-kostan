@@ -121,15 +121,11 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
                       {room.prices.map((price) => (
                         <div key={price.id} className="flex justify-between text-sm">
                           <span className="text-muted-foreground">
-                            {price.period === "WEEK"
-                              ? "Mingguan"
-                              : price.period === "MONTH"
-                                ? "Bulanan"
-                                : price.period === "3MO"
-                                  ? "3 Bulan"
-                                  : price.period === "6MO"
-                                    ? "6 Bulan"
-                                    : "12 Bulan"}
+                            {price.period === "MONTH"
+                              ? "1 Bulan"
+                              : price.period === "6MO"
+                                ? "6 Bulan"
+                                : "1 Tahun"}
                           </span>
                           <span className="font-bold">Rp {price.amount.toLocaleString("id-ID")}</span>
                         </div>

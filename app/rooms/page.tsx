@@ -1,16 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Wifi, Users, DoorOpen, Bed, Bath, Square, Search, SlidersHorizontal, ArrowRight, MapPin } from "lucide-react"
+import { Wifi, Users, DoorOpen, Bed, Bath, Square, ArrowRight, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface Room {
@@ -26,23 +23,14 @@ interface Room {
 }
 
 export default function RoomsPage() {
-  const searchParams = useSearchParams()
   const [rooms, setRooms] = useState<Room[]>([])
   const [loading, setLoading] = useState(true)
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000000])
-  const [period, setPeriod] = useState("MONTH")
-  const [sortBy, setSortBy] = useState("newest")
+  const period = "MONTH" // Default period untuk menampilkan harga
 
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const params = new URLSearchParams()
-        params.set("minPrice", priceRange[0].toString())
-        params.set("maxPrice", priceRange[1].toString())
-        params.set("period", period)
-        params.set("sort", sortBy)
-
-        const response = await fetch(`/api/rooms?${params}`)
+        const response = await fetch(`/api/rooms`)
         const data = await response.json()
         setRooms(data)
       } catch (error) {
@@ -53,10 +41,7 @@ export default function RoomsPage() {
     }
 
     fetchRooms()
-  }, [priceRange, period, sortBy])
-
-  const minPrice = Math.min(...rooms.flatMap((r) => r.prices.map((p) => p.amount)), 0)
-  const maxPrice = Math.max(...rooms.flatMap((r) => r.prices.map((p) => p.amount)), 5000000)
+  }, [])
 
   return (
     <>
@@ -80,59 +65,6 @@ export default function RoomsPage() {
               <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
                 Temukan kamar kost impian Anda dengan fasilitas lengkap dan harga terjangkau
               </p>
-            </div>
-
-            {/* Enhanced Filters */}
-            <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-xl p-6 md:p-8 mb-12">
-              <div className="flex items-center gap-3 mb-6">
-                <SlidersHorizontal className="h-5 w-5 text-red-600" />
-                <h2 className="text-xl font-bold text-gray-900">Filter Pencarian</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <Search className="h-4 w-4 text-red-600" />
-                    Periode Sewa
-                  </label>
-                  <Select value={period} onValueChange={setPeriod}>
-                    <SelectTrigger className="h-12 border-2 border-gray-200 rounded-xl focus:border-red-600">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="WEEK">Mingguan</SelectItem>
-                      <SelectItem value="MONTH">Bulanan</SelectItem>
-                      <SelectItem value="3MO">3 Bulan</SelectItem>
-                      <SelectItem value="6MO">6 Bulan</SelectItem>
-                      <SelectItem value="12MO">12 Bulan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">Harga Maksimal</label>
-                  <Input
-                    type="number"
-                    placeholder="Rp 5.000.000"
-                    value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], Number.parseInt(e.target.value) || 5000000])}
-                    className="h-12 border-2 border-gray-200 rounded-xl focus:border-red-600"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">Urutkan</label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="h-12 border-2 border-gray-200 rounded-xl focus:border-red-600">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="newest">Terbaru</SelectItem>
-                      <SelectItem value="price-asc">Harga Termurah</SelectItem>
-                      <SelectItem value="price-desc">Harga Termahal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
             </div>
           </div>
         </section>

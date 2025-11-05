@@ -198,7 +198,7 @@ export default function ContactPage() {
                         <p className="text-sm text-gray-600">Hubungi kami langsung</p>
                       </div>
                     </div>
-                    <p className="text-lg font-bold text-gray-900">+62 812-3456-7890</p>
+                    <p className="text-lg font-bold text-gray-900">+62 895-1446-1882</p>
                   </CardContent>
                 </Card>
 
@@ -213,7 +213,7 @@ export default function ContactPage() {
                         <p className="text-sm text-gray-600">Chat dengan kami</p>
                       </div>
                     </div>
-                    <p className="text-lg font-bold text-gray-900">+62 812-3456-7890</p>
+                    <p className="text-lg font-bold text-gray-900">+62 895-1446-1882</p>
                   </CardContent>
                 </Card>
 
@@ -228,7 +228,7 @@ export default function ContactPage() {
                         <p className="text-sm text-gray-600">Kirim email ke kami</p>
                       </div>
                     </div>
-                    <p className="text-lg font-bold text-gray-900">info@kost.com</p>
+                    <p className="text-lg font-bold text-gray-900">akakost@gmail.com</p>
                   </CardContent>
                 </Card>
 
@@ -259,8 +259,8 @@ export default function ContactPage() {
                         <p className="text-sm text-gray-600">Kunjungi kami</p>
                       </div>
                     </div>
-                    <p className="text-base font-semibold text-gray-900">Jl. Contoh No. 123</p>
-                    <p className="text-base font-semibold text-gray-900">Jakarta, Indonesia</p>
+                    <p className="text-base font-semibold text-gray-900">Jl. Babakan Lio No.11, Bogor</p>
+                    <p className="text-base font-semibold text-gray-900">Bogor, Indonesia</p>
                   </CardContent>
                 </Card>
               </div>

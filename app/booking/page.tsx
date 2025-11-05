@@ -116,14 +116,8 @@ export default function BookingPage() {
     const end = new Date(start)
 
     switch (period) {
-      case "WEEK":
-        end.setDate(end.getDate() + 7)
-        break
       case "MONTH":
         end.setMonth(end.getMonth() + 1)
-        break
-      case "3MO":
-        end.setMonth(end.getMonth() + 3)
         break
       case "6MO":
         end.setMonth(end.getMonth() + 6)
@@ -347,11 +341,9 @@ export default function BookingPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="WEEK">Mingguan</SelectItem>
-                          <SelectItem value="MONTH">Bulanan</SelectItem>
-                          <SelectItem value="3MO">3 Bulan</SelectItem>
+                          <SelectItem value="MONTH">1 Bulan</SelectItem>
                           <SelectItem value="6MO">6 Bulan</SelectItem>
-                          <SelectItem value="12MO">12 Bulan</SelectItem>
+                          <SelectItem value="12MO">1 Tahun</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -408,15 +400,11 @@ export default function BookingPage() {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Periode</p>
                     <p className="font-bold text-gray-900">
-                      {formData.period === "WEEK"
-                        ? "Mingguan"
-                        : formData.period === "MONTH"
-                          ? "Bulanan"
-                          : formData.period === "3MO"
-                            ? "3 Bulan"
-                            : formData.period === "6MO"
-                              ? "6 Bulan"
-                              : "12 Bulan"}
+                      {formData.period === "MONTH"
+                        ? "1 Bulan"
+                        : formData.period === "6MO"
+                          ? "6 Bulan"
+                          : "1 Tahun"}
                     </p>
                   </div>
 

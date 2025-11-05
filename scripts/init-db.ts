@@ -50,62 +50,132 @@ async function main() {
     console.log("[v0] Creating Rooms...")
     const rooms = [
       {
-        name: "Kamar Standar A",
-        size: "3x4m",
+        name: "Kamar Premium 101",
+        slug: "kamar-premium-101",
+        size: "3.5x4.5m",
         floor: 1,
         capacity: 1,
-        facilities: JSON.stringify(["AC", "Kasur", "Lemari"]),
-        mainImageUrl: "/bedroom-interior-modern.jpg",
+        facilities: JSON.stringify([
+          "Kasur Premium",
+          "Lemari",
+          "Meja",
+          "Kursi",
+          "AC",
+          "WiFi",
+          "Kamar Mandi Dalam",
+        ]),
+        mainImageUrl: "/Kamar_Premium.jpeg",
+        prices: {
+          MONTH: 1000000,
+          "6MO": 5700000,
+          "12MO": 11000000,
+        },
       },
       {
-        name: "Kamar Standar B",
-        size: "3x4m",
-        floor: 1,
-        capacity: 1,
-        facilities: JSON.stringify(["AC", "Kasur", "Lemari"]),
-        mainImageUrl: "/bedroom-interior-modern.jpg",
-      },
-      {
-        name: "Kamar Premium",
-        size: "4x5m",
+        name: "Kamar Premium 201",
+        slug: "kamar-premium-201",
+        size: "3.5x4.5m",
         floor: 2,
-        capacity: 2,
-        facilities: JSON.stringify(["AC", "Kasur Double", "Lemari", "Meja Kerja"]),
-        mainImageUrl: "/luxury-bedroom.png",
+        capacity: 1,
+        facilities: JSON.stringify([
+          "Kasur Premium",
+          "Lemari",
+          "Meja",
+          "Kursi",
+          "AC",
+          "WiFi",
+          "Kamar Mandi Dalam",
+        ]),
+        mainImageUrl: "/Kamar_Premium.jpeg",
+        prices: {
+          MONTH: 1000000,
+          "6MO": 5700000,
+          "12MO": 11000000,
+        },
       },
       {
-        name: "Kamar VIP Suite",
-        size: "5x6m",
+        name: "Kamar Premium 301",
+        slug: "kamar-premium-301",
+        size: "3.5x4.5m",
         floor: 3,
-        capacity: 2,
-        facilities: JSON.stringify(["AC", "Kasur Double", "Lemari", "Meja Kerja", "Sofa"]),
-        mainImageUrl: "/vip-suite-luxury-apartment.jpg",
+        capacity: 1,
+        facilities: JSON.stringify([
+          "Kasur Premium",
+          "Lemari",
+          "Meja",
+          "Kursi",
+          "AC",
+          "WiFi",
+          "Kamar Mandi Dalam",
+        ]),
+        mainImageUrl: "/Kamar_Premium.jpeg",
+        prices: {
+          MONTH: 1000000,
+          "6MO": 5700000,
+          "12MO": 11000000,
+        },
+      },
+      {
+        name: "Kamar Standart 102",
+        slug: "kamar-standart-102",
+        size: "3x4m",
+        floor: 1,
+        capacity: 1,
+        facilities: JSON.stringify(["Kasur", "Lemari", "Meja", "Kursi", "AC", "WiFi"]),
+        mainImageUrl: "/Kamar_Strandart.jpeg",
+        prices: {
+          MONTH: 700000,
+          "6MO": 3900000,
+          "12MO": 7500000,
+        },
+      },
+      {
+        name: "Kamar Standart 202",
+        slug: "kamar-standart-202",
+        size: "3x4m",
+        floor: 2,
+        capacity: 1,
+        facilities: JSON.stringify(["Kasur", "Lemari", "Meja", "Kursi", "AC", "WiFi"]),
+        mainImageUrl: "/Kamar_Strandart.jpeg",
+        prices: {
+          MONTH: 700000,
+          "6MO": 3900000,
+          "12MO": 7500000,
+        },
+      },
+      {
+        name: "Kamar Standart 302",
+        slug: "kamar-standart-302",
+        size: "3x4m",
+        floor: 3,
+        capacity: 1,
+        facilities: JSON.stringify(["Kasur", "Lemari", "Meja", "Kursi", "AC", "WiFi"]),
+        mainImageUrl: "/Kamar_Strandart.jpeg",
+        prices: {
+          MONTH: 700000,
+          "6MO": 3900000,
+          "12MO": 7500000,
+        },
       },
     ]
 
-    for (let i = 0; i < rooms.length; i++) {
+    for (const roomData of rooms) {
+      const { prices, ...roomInfo } = roomData
       const room = await prisma.room.create({
         data: {
-          ...rooms[i],
-          slug: `kamar-${i + 1}`,
+          ...roomInfo,
           kostId: kost.id,
+          isAvailable: true,
         },
       })
 
       // Create prices for each room
-      const prices = [
-        { period: "WEEK", amount: 350000 },
-        { period: "MONTH", amount: 1200000 },
-        { period: "3MO", amount: 3300000 },
-        { period: "6MO", amount: 6000000 },
-        { period: "12MO", amount: 11000000 },
-      ]
-
-      for (const price of prices) {
+      for (const [period, amount] of Object.entries(prices)) {
         await prisma.price.create({
           data: {
             roomId: room.id,
-            ...price,
+            period,
+            amount: Number(amount),
           },
         })
       }

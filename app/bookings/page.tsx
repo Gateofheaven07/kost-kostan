@@ -209,15 +209,11 @@ export default async function BookingsPage() {
                             </p>
                           </div>
                           <p className="font-bold text-lg text-gray-900">
-                            {booking.period === "WEEK"
-                              ? "Mingguan"
-                              : booking.period === "MONTH"
-                                ? "Bulanan"
-                                : booking.period === "3MO"
-                                  ? "3 Bulan"
-                                  : booking.period === "6MO"
-                                    ? "6 Bulan"
-                                    : "12 Bulan"}
+                            {booking.period === "MONTH"
+                              ? "1 Bulan"
+                              : booking.period === "6MO"
+                                ? "6 Bulan"
+                                : "1 Tahun"}
                           </p>
                         </div>
                       </div>

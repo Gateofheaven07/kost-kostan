@@ -41,9 +41,7 @@ export default function EditRoomPage() {
     isAvailable: true,
     mainImageUrl: "",
     prices: {
-      WEEK: 0,
       MONTH: 0,
-      "3MO": 0,
       "6MO": 0,
       "12MO": 0,
     },
@@ -65,9 +63,7 @@ export default function EditRoomPage() {
             isAvailable: data.isAvailable,
             mainImageUrl: data.mainImageUrl || "",
             prices: {
-              WEEK: data.prices.find((p: any) => p.period === "WEEK")?.amount || 0,
               MONTH: data.prices.find((p: any) => p.period === "MONTH")?.amount || 0,
-              "3MO": data.prices.find((p: any) => p.period === "3MO")?.amount || 0,
               "6MO": data.prices.find((p: any) => p.period === "6MO")?.amount || 0,
               "12MO": data.prices.find((p: any) => p.period === "12MO")?.amount || 0,
             },
@@ -224,15 +220,11 @@ export default function EditRoomPage() {
                 {Object.entries(formData.prices).map(([period, price]) => (
                   <div key={period}>
                     <label className="text-sm font-medium mb-2 block">
-                      {period === "WEEK"
-                        ? "Mingguan"
-                        : period === "MONTH"
-                          ? "Bulanan"
-                          : period === "3MO"
-                            ? "3 Bulan"
-                            : period === "6MO"
-                              ? "6 Bulan"
-                              : "12 Bulan"}
+                      {period === "MONTH"
+                        ? "1 Bulan"
+                        : period === "6MO"
+                          ? "6 Bulan"
+                          : "1 Tahun"}
                     </label>
                     <Input
                       type="number"

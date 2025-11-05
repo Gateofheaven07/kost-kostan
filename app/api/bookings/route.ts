@@ -5,7 +5,7 @@ import { z } from "zod"
 
 const bookingSchema = z.object({
   roomId: z.string(),
-  period: z.enum(["WEEK", "MONTH", "3MO", "6MO", "12MO"]),
+  period: z.enum(["MONTH", "6MO", "12MO"]),
   startDate: z.string(),
   endDate: z.string(),
   totalPrice: z.number().positive(),

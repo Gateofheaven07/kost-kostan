@@ -95,7 +95,7 @@ model RoomImage {
 model Price {
   id        String   @id @default(cuid())
   roomId    String
-  period    String   // "WEEK", "MONTH", "3MO", "6MO", "12MO"
+  period    String   // "MONTH", "6MO", "12MO"
   amount    Int      // in rupiah
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -112,7 +112,7 @@ model Booking {
   roomId     String
   startDate  DateTime
   endDate    DateTime
-  period     String   // "WEEK", "MONTH", "3MO", "6MO", "12MO"
+  period     String   // "MONTH", "6MO", "12MO"
   totalPrice Int      // in rupiah
   status     String   @default("PENDING") // "PENDING", "CONFIRMED", "CANCELLED"
   notes      String?
