@@ -33,7 +33,7 @@ export default function Home() {
                   <span className="text-red-600">impian Anda.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-gray-700 leading-relaxed max-w-xl">
-                Buat keputusan makin cepat dan tepat. Aka Kost jadi solusi lengkap buat kamu cari dan sewa kamar kost, fasilitasnya lengkap, harganya ramah di kantong, dan proses booking-nya anti ribet.
+                Buat keputusan makin cepat dan tepat. AKA Kost jadi solusi lengkap buat kamu yang lagi cari kamar kost, fasilitasnya lengkap, harganya ramah di kantong, dan proses booking-nya anti ribet.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link href="/rooms">
