@@ -30,6 +30,43 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json()
     const { name, floor, capacity, size, facilities, isAvailable, mainImageUrl, prices } = body
 
+    // Check if there are active CONFIRMED bookings when admin tries to make room available
+    let hasActiveBookings = false
+    let activeBookingCount = 0
+    if (isAvailable) {
+      const activeBookings = await prisma.booking.findMany({
+        where: {
+          roomId: id,
+          status: "CONFIRMED",
+          endDate: {
+            gte: new Date(), // Only active bookings (not expired)
+          },
+        },
+        select: {
+          id: true,
+        },
+      })
+      activeBookingCount = activeBookings.length
+      hasActiveBookings = activeBookings.length > 0
+      
+      // If admin wants to make room available but there are active bookings,
+      // we should cancel those bookings first to avoid sync conflicts
+      if (hasActiveBookings) {
+        await prisma.booking.updateMany({
+          where: {
+            id: {
+              in: activeBookings.map((b) => b.id),
+            },
+          },
+          data: {
+            status: "CANCELLED",
+          },
+        })
+        console.log(`[Admin Update Room] Cancelled ${activeBookingCount} active CONFIRMED bookings for room ${id}`)
+      }
+    }
+
+    // Admin can now safely update the room status
     await prisma.room.update({
       where: { id },
       data: {
@@ -57,7 +94,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       include: { prices: true },
     })
 
-    return NextResponse.json(updatedRoom)
+    return NextResponse.json({
+      ...updatedRoom,
+      message: hasActiveBookings
+        ? `${activeBookingCount} booking CONFIRMED aktif telah dibatalkan otomatis untuk mengubah status kamar menjadi tersedia`
+        : "Kamar berhasil diperbarui",
+    })
   } catch (error) {
     return NextResponse.json({ error: "Gagal memperbarui kamar" }, { status: 500 })
   }

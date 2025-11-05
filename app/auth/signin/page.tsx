@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -157,6 +158,13 @@ export default function SignInPage() {
                 placeholder="••••••••"
                 required
               />
+              {!isSignUp && (
+                <div className="mt-2 text-right">
+                  <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+                    Lupa password?
+                  </Link>
+                </div>
+              )}
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>

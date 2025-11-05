@@ -10,13 +10,67 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json()
     const { status } = body
 
-    const booking = await prisma.booking.update({
+    // Get booking with room info
+    const booking = await prisma.booking.findUnique({
       where: { id },
-      data: { status },
+      include: { room: true },
     })
 
-    return NextResponse.json(booking)
+    if (!booking) {
+      return NextResponse.json({ error: "Booking tidak ditemukan" }, { status: 404 })
+    }
+
+    // Update booking status and room availability
+    if (status === "CONFIRMED") {
+      // Mark room as rented when booking is confirmed
+      await prisma.$transaction([
+        prisma.booking.update({
+          where: { id },
+          data: { status },
+        }),
+        prisma.room.update({
+          where: { id: booking.roomId },
+          data: { isAvailable: false },
+        }),
+      ])
+    } else if (status === "CANCELLED" || status === "PENDING") {
+      // When booking is cancelled or pending, room status depends on other active bookings
+      // Check if there are other confirmed bookings for this room
+      const activeBookings = await prisma.booking.count({
+        where: {
+          roomId: booking.roomId,
+          status: "CONFIRMED",
+          id: { not: id }, // Exclude current booking
+        },
+      })
+
+      // Only make room available if no other confirmed bookings exist
+      await prisma.$transaction([
+        prisma.booking.update({
+          where: { id },
+          data: { status },
+        }),
+        prisma.room.update({
+          where: { id: booking.roomId },
+          data: { isAvailable: activeBookings === 0 },
+        }),
+      ])
+    } else {
+      // For other status, just update booking
+      await prisma.booking.update({
+        where: { id },
+        data: { status },
+      })
+    }
+
+    const updatedBooking = await prisma.booking.findUnique({
+      where: { id },
+      include: { room: true },
+    })
+
+    return NextResponse.json(updatedBooking)
   } catch (error) {
+    console.error("Error updating booking:", error)
     return NextResponse.json({ error: "Gagal memperbarui booking" }, { status: 500 })
   }
 }

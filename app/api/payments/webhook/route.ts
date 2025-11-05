@@ -38,7 +38,13 @@ export async function POST(request: NextRequest) {
     // Cari payment berdasarkan order_id
     const payment = await prisma.payment.findUnique({
       where: { orderId: order_id },
-      include: { booking: true },
+      include: { 
+        booking: {
+          include: {
+            room: true,
+          }
+        }
+      },
     })
 
     if (!payment) {
@@ -84,11 +90,18 @@ export async function POST(request: NextRequest) {
 
     // Update booking status jika payment sudah settlement
     if (paymentStatus === "settlement" && payment.booking.status !== "CONFIRMED") {
-      await prisma.booking.update({
-        where: { id: payment.bookingId },
-        data: { status: "CONFIRMED" },
-      })
-      console.log(`[Webhook] Booking ${payment.bookingId} confirmed`)
+      // Update booking status dan set room to unavailable
+      await prisma.$transaction([
+        prisma.booking.update({
+          where: { id: payment.bookingId },
+          data: { status: "CONFIRMED" },
+        }),
+        prisma.room.update({
+          where: { id: payment.booking.roomId },
+          data: { isAvailable: false },
+        }),
+      ])
+      console.log(`[Webhook] Booking ${payment.bookingId} confirmed and room ${payment.booking.roomId} marked as rented`)
     }
 
     // Update booking status jika payment dibatalkan/expired/deny
@@ -103,6 +116,8 @@ export async function POST(request: NextRequest) {
         data: { status: "CANCELLED" },
       })
       console.log(`[Webhook] Booking ${payment.bookingId} cancelled`)
+      // Note: Room tetap tidak tersedia karena mungkin ada booking lain yang aktif
+      // Admin harus manual mengubah status kamar jika diperlukan
     }
 
     return NextResponse.json({

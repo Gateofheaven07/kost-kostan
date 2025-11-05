@@ -107,8 +107,8 @@ export default function RoomsPage() {
                         <TableCell>{room.floor}</TableCell>
                         <TableCell>{room.capacity} orang</TableCell>
                         <TableCell>
-                          <Badge variant={room.isAvailable ? "default" : "secondary"}>
-                            {room.isAvailable ? "Tersedia" : "Tidak Tersedia"}
+                          <Badge variant={room.isAvailable ? "default" : "destructive"}>
+                            {room.isAvailable ? "Tersedia" : "Tersewa"}
                           </Badge>
                         </TableCell>
                         <TableCell>Rp {monthlyPrice.toLocaleString("id-ID")}</TableCell>

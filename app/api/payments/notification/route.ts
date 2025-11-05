@@ -145,16 +145,23 @@ export async function POST(request: NextRequest) {
 
     try {
       if (transactionStatus === "settlement" || transactionStatus === "capture") {
-        // Payment successful - Auto confirm booking
+        // Payment successful - Auto confirm booking and mark room as rented
         if (payment.booking.status !== "CONFIRMED") {
-          await prisma.booking.update({
-            where: { id: payment.bookingId },
-            data: { status: "CONFIRMED" },
-          })
+          await prisma.$transaction([
+            prisma.booking.update({
+              where: { id: payment.bookingId },
+              data: { status: "CONFIRMED" },
+            }),
+            prisma.room.update({
+              where: { id: payment.booking.roomId },
+              data: { isAvailable: false },
+            }),
+          ])
           bookingStatusUpdated = true
           newBookingStatus = "CONFIRMED"
-          console.log("[Webhook] ✅ Booking confirmed:", {
+          console.log("[Webhook] ✅ Booking confirmed and room marked as rented:", {
             bookingId: payment.bookingId,
+            roomId: payment.booking.roomId,
             roomName: payment.booking.room.name,
             userName: payment.booking.user.name,
             oldStatus: payment.booking.status,

@@ -19,6 +19,7 @@ interface Room {
   size: string
   facilities: string
   mainImageUrl: string | null
+  isAvailable: boolean
   prices: Array<{ period: string; amount: number }>
 }
 
@@ -107,7 +108,12 @@ export default function RoomsPage() {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                           
                           {/* Price Badge */}
-                          <div className="absolute top-4 right-4">
+                          <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                            {!room.isAvailable && (
+                              <Badge className="bg-red-600 text-white border-2 border-red-700 px-4 py-2 font-bold text-base shadow-lg z-10">
+                                Tersewa
+                              </Badge>
+                            )}
                             <Badge className="bg-white/95 text-red-600 border-2 border-red-600/20 px-4 py-2 font-bold text-base shadow-lg">
                               Rp {monthlyPrice.toLocaleString("id-ID")}
                             </Badge>
@@ -124,12 +130,21 @@ export default function RoomsPage() {
 
                         {/* Content Section */}
                         <CardHeader className="pb-4">
-                          <CardTitle className="text-2xl font-bold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2">
-                            {room.name}
-                          </CardTitle>
-                          <CardDescription className="text-base text-gray-600">
-                            Kapasitas: {room.capacity} orang • {room.size}
-                          </CardDescription>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <CardTitle className="text-2xl font-bold text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2">
+                                {room.name}
+                              </CardTitle>
+                              <CardDescription className="text-base text-gray-600">
+                                Kapasitas: {room.capacity} orang • {room.size}
+                              </CardDescription>
+                            </div>
+                            {!room.isAvailable && (
+                              <Badge variant="destructive" className="shrink-0">
+                                Tersewa
+                              </Badge>
+                            )}
+                          </div>
                         </CardHeader>
                         
                         <CardContent className="space-y-4">

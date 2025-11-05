@@ -113,7 +113,16 @@ export default function EditRoomPage() {
       })
 
       if (response.ok) {
-        toast({ title: "Berhasil", description: "Kamar berhasil diperbarui" })
+        const data = await response.json()
+        if (data.message) {
+          toast({
+            title: "Berhasil",
+            description: data.message,
+            variant: "default",
+          })
+        } else {
+          toast({ title: "Berhasil", description: "Kamar berhasil diperbarui" })
+        }
         router.push("/admin/rooms")
       } else {
         toast({

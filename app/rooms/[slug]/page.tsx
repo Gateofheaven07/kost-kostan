@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { prisma } from "@/lib/prisma"
+import { syncRoomAvailability } from "@/lib/sync-room-availability"
 import { Wifi, Users, DoorOpen, MapPin } from "lucide-react"
 
 interface RoomDetailPageProps {
@@ -15,6 +16,9 @@ interface RoomDetailPageProps {
 
 export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
   const { slug } = await params
+
+  // Sync room availability first to ensure accurate status
+  await syncRoomAvailability()
 
   const room = await prisma.room.findUnique({
     where: { slug },
@@ -110,8 +114,17 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
             <div>
               <Card className="sticky top-4">
                 <CardHeader>
-                  <CardTitle>{room.name}</CardTitle>
-                  <CardDescription>{room.kost.name}</CardDescription>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle>{room.name}</CardTitle>
+                      <CardDescription>{room.kost.name}</CardDescription>
+                    </div>
+                    {!room.isAvailable && (
+                      <Badge variant="destructive" className="shrink-0">
+                        Tersewa
+                      </Badge>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Prices */}
@@ -133,9 +146,20 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
                     </div>
                   </div>
 
-                  <Link href={`/booking?roomId=${room.id}`} className="w-full">
-                    <Button className="w-full">Mulai Sewa</Button>
-                  </Link>
+                  {room.isAvailable ? (
+                    <Link href={`/booking?roomId=${room.id}`} className="w-full">
+                      <Button className="w-full">Mulai Sewa</Button>
+                    </Link>
+                  ) : (
+                    <div className="space-y-2">
+                      <Button className="w-full" disabled>
+                        Kamar Tersewa
+                      </Button>
+                      <p className="text-sm text-muted-foreground text-center">
+                        Kamar ini sedang tidak tersedia untuk disewa
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
