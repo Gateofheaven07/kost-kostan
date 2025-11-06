@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -19,50 +20,42 @@ interface Booking {
 
 export default function BookingsPage() {
   const { toast } = useToast()
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    fetchBookings()
-  }, [])
-
-  const fetchBookings = async () => {
-    try {
+  const { data: bookings = [], isLoading: loading } = useQuery<Booking[]>({
+    queryKey: ["admin-bookings"],
+    queryFn: async () => {
       const response = await fetch("/api/admin/bookings")
-      if (response.ok) {
-        const data = await response.json()
-        setBookings(data)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal memuat data booking",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+      if (!response.ok) throw new Error("Failed to fetch bookings")
+      return response.json()
+    },
+  })
 
-  const updateStatus = async (bookingId: string, newStatus: string) => {
-    try {
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ bookingId, status }: { bookingId: string; status: string }) => {
       const response = await fetch(`/api/admin/bookings/${bookingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status }),
       })
-
-      if (response.ok) {
-        toast({ title: "Berhasil", description: "Status booking berhasil diperbarui" })
-        fetchBookings()
-      }
-    } catch (error) {
+      if (!response.ok) throw new Error("Failed to update booking status")
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({ title: "Berhasil", description: "Status booking berhasil diperbarui" })
+      queryClient.invalidateQueries({ queryKey: ["admin-bookings"] })
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Gagal memperbarui status",
         variant: "destructive",
       })
-    }
+    },
+  })
+
+  const updateStatus = (bookingId: string, newStatus: string) => {
+    updateStatusMutation.mutate({ bookingId, status: newStatus })
   }
 
   return (
@@ -126,13 +119,18 @@ export default function BookingsPage() {
                       <TableCell>
                         {booking.status === "PENDING" && (
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => updateStatus(booking.id, "CONFIRMED")}>
+                            <Button 
+                              size="sm" 
+                              onClick={() => updateStatus(booking.id, "CONFIRMED")}
+                              disabled={updateStatusMutation.isPending}
+                            >
                               Konfirmasi
                             </Button>
                             <Button
                               size="sm"
                               variant="destructive"
                               onClick={() => updateStatus(booking.id, "CANCELLED")}
+                              disabled={updateStatusMutation.isPending}
                             >
                               Tolak
                             </Button>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
@@ -15,30 +15,22 @@ interface User {
 
 export default function TenantsPage() {
   const { toast } = useToast()
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchUsers()
-  }, [])
-
-  const fetchUsers = async () => {
-    try {
+  const { data: users = [], isLoading: loading } = useQuery<User[]>({
+    queryKey: ["admin-tenants"],
+    queryFn: async () => {
       const response = await fetch("/api/admin/tenants")
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data)
-      }
-    } catch (error) {
+      if (!response.ok) throw new Error("Failed to fetch tenants")
+      return response.json()
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Gagal memuat data penyewa",
         variant: "destructive",
       })
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+  })
 
   return (
     <div className="p-8">

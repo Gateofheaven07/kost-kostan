@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import Image from "next/image"
 import { Navbar } from "@/components/navbar"
@@ -24,27 +24,18 @@ interface Room {
 }
 
 export default function RoomsPage() {
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [loading, setLoading] = useState(true)
   const period = "MONTH" // Default period untuk menampilkan harga
 
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        const response = await fetch(`/api/rooms`, {
-          cache: "no-store",
-        })
-        const data = await response.json()
-        setRooms(data)
-      } catch (error) {
-        console.error("Error fetching rooms:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchRooms()
-  }, [])
+  const { data: rooms = [], isLoading: loading } = useQuery<Room[]>({
+    queryKey: ["rooms"],
+    queryFn: async () => {
+      const response = await fetch(`/api/rooms`, {
+        cache: "no-store",
+      })
+      if (!response.ok) throw new Error("Failed to fetch rooms")
+      return response.json()
+    },
+  })
 
   return (
     <>

@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,8 +33,7 @@ interface OwnerSettings {
 
 export default function SettingsPage() {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
+  const queryClient = useQueryClient()
 
   const [kostData, setKostData] = useState<KostSettings>({
     name: "",
@@ -57,12 +57,9 @@ export default function SettingsPage() {
     socials: "",
   })
 
-  useEffect(() => {
-    fetchSettings()
-  }, [])
-
-  const fetchSettings = async () => {
-    try {
+  const { isLoading: loading } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: async () => {
       const [kostRes, ownerRes] = await Promise.all([
         fetch("/api/admin/settings/kost"),
         fetch("/api/admin/settings/owner"),
@@ -83,16 +80,17 @@ export default function SettingsPage() {
           socials: typeof owner.socials === "string" ? owner.socials : JSON.stringify(owner.socials),
         })
       }
-    } catch (error) {
+
+      return { kost: kostRes.ok ? await kostRes.json() : null, owner: ownerRes.ok ? await ownerRes.json() : null }
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Gagal memuat pengaturan",
         variant: "destructive",
       })
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+  })
 
   const handleKostChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -104,57 +102,63 @@ export default function SettingsPage() {
     setOwnerData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleKostSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-
-    try {
+  const updateKostMutation = useMutation({
+    mutationFn: async (data: KostSettings) => {
       const response = await fetch("/api/admin/settings/kost", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...kostData,
-          facilities: kostData.facilities.split(",").map((f) => f.trim()),
+          ...data,
+          facilities: data.facilities.split(",").map((f) => f.trim()),
         }),
       })
-
-      if (response.ok) {
-        toast({ title: "Berhasil", description: "Pengaturan kost berhasil disimpan" })
-      }
-    } catch (error) {
+      if (!response.ok) throw new Error("Failed to update kost settings")
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({ title: "Berhasil", description: "Pengaturan kost berhasil disimpan" })
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] })
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Gagal menyimpan pengaturan",
         variant: "destructive",
       })
-    } finally {
-      setSubmitting(false)
-    }
+    },
+  })
+
+  const updateOwnerMutation = useMutation({
+    mutationFn: async (data: OwnerSettings) => {
+      const response = await fetch("/api/admin/settings/owner", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) throw new Error("Failed to update owner settings")
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({ title: "Berhasil", description: "Pengaturan pemilik berhasil disimpan" })
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] })
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Gagal menyimpan pengaturan",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const handleKostSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    updateKostMutation.mutate(kostData)
   }
 
   const handleOwnerSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitting(true)
-
-    try {
-      const response = await fetch("/api/admin/settings/owner", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ownerData),
-      })
-
-      if (response.ok) {
-        toast({ title: "Berhasil", description: "Pengaturan pemilik berhasil disimpan" })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal menyimpan pengaturan",
-        variant: "destructive",
-      })
-    } finally {
-      setSubmitting(false)
-    }
+    updateOwnerMutation.mutate(ownerData)
   }
 
   if (loading) {
@@ -237,8 +241,8 @@ export default function SettingsPage() {
               <Input name="email" type="email" value={kostData.email} onChange={handleKostChange} />
             </div>
 
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Menyimpan..." : "Simpan Pengaturan Kost"}
+            <Button type="submit" disabled={updateKostMutation.isPending}>
+              {updateKostMutation.isPending ? "Menyimpan..." : "Simpan Pengaturan Kost"}
             </Button>
           </form>
         </CardContent>
@@ -301,8 +305,8 @@ export default function SettingsPage() {
               />
             </div>
 
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Menyimpan..." : "Simpan Pengaturan Pemilik"}
+            <Button type="submit" disabled={updateOwnerMutation.isPending}>
+              {updateOwnerMutation.isPending ? "Menyimpan..." : "Simpan Pengaturan Pemilik"}
             </Button>
           </form>
         </CardContent>

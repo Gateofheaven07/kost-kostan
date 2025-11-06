@@ -4,6 +4,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { useQuery, useMutation } from "@tanstack/react-query"
 import Link from "next/link"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -26,9 +27,6 @@ export default function BookingPage() {
   const { toast } = useToast()
 
   const roomId = searchParams.get("roomId")
-  const [room, setRoom] = useState<Room | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
   const [paymentProcessing, setPaymentProcessing] = useState(false)
   const [snapLoaded, setSnapLoaded] = useState(false)
 
@@ -93,23 +91,17 @@ export default function BookingPage() {
     }
 
     loadMidtransScript()
-
-    const fetchRoom = async () => {
-      try {
-        const response = await fetch(`/api/rooms/${roomId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setRoom(data)
-        }
-      } catch (error) {
-        console.error("Error fetching room:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchRoom()
   }, [session, roomId, router])
+
+  const { data: room, isLoading: loading } = useQuery<Room>({
+    queryKey: ["room", roomId],
+    queryFn: async () => {
+      const response = await fetch(`/api/rooms/${roomId}`)
+      if (!response.ok) throw new Error("Failed to fetch room")
+      return response.json()
+    },
+    enabled: !!roomId && !!session,
+  })
 
   const calculateEndDate = (startDate: string, period: string): Date => {
     const start = new Date(startDate)
@@ -136,62 +128,57 @@ export default function BookingPage() {
     return price?.amount || 0
   }
 
+  const createBookingMutation = useMutation({
+    mutationFn: async (bookingData: any) => {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookingData),
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Gagal membuat booking")
+      }
+      return response.json()
+    },
+  })
+
+  const createPaymentTokenMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const response = await fetch("/api/payments/create-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId }),
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Gagal membuat token pembayaran")
+      }
+      const data = await response.json()
+      return data.token
+    },
+  })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitting(true)
 
     try {
       const endDate = calculateEndDate(formData.startDate, formData.period)
       const totalPrice = getTotalPrice()
 
       // Create booking first
-      const bookingResponse = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomId,
-          period: formData.period,
-          startDate: formData.startDate,
-          endDate: endDate.toISOString().split("T")[0],
-          totalPrice,
-          notes: formData.notes,
-        }),
+      const booking = await createBookingMutation.mutateAsync({
+        roomId,
+        period: formData.period,
+        startDate: formData.startDate,
+        endDate: endDate.toISOString().split("T")[0],
+        totalPrice,
+        notes: formData.notes,
       })
-
-      if (!bookingResponse.ok) {
-        const data = await bookingResponse.json()
-        toast({
-          title: "Error",
-          description: data.error || "Gagal membuat booking",
-          variant: "destructive",
-        })
-        setSubmitting(false)
-        return
-      }
-
-      const booking = await bookingResponse.json()
 
       // Create payment token
       setPaymentProcessing(true)
-      const paymentResponse = await fetch("/api/payments/create-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: booking.id }),
-      })
-
-      if (!paymentResponse.ok) {
-        const data = await paymentResponse.json()
-        toast({
-          title: "Error",
-          description: data.error || "Gagal membuat token pembayaran",
-          variant: "destructive",
-        })
-        setPaymentProcessing(false)
-        setSubmitting(false)
-        return
-      }
-
-      const { token } = await paymentResponse.json()
+      const token = await createPaymentTokenMutation.mutateAsync(booking.id)
 
       // Wait for Midtrans Snap script to be loaded
       const waitForSnap = (): Promise<void> => {
@@ -265,14 +252,13 @@ export default function BookingPage() {
           variant: "destructive",
         })
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Terjadi kesalahan. Silakan coba lagi.",
+        description: error.message || "Terjadi kesalahan. Silakan coba lagi.",
         variant: "destructive",
       })
     } finally {
-      setSubmitting(false)
       setPaymentProcessing(false)
     }
   }
@@ -374,9 +360,9 @@ export default function BookingPage() {
                     <Button
                       type="submit"
                       className="w-full h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
-                      disabled={submitting || paymentProcessing || !formData.startDate}
+                      disabled={createBookingMutation.isPending || createPaymentTokenMutation.isPending || paymentProcessing || !formData.startDate}
                     >
-                      {submitting || paymentProcessing
+                      {createBookingMutation.isPending || createPaymentTokenMutation.isPending || paymentProcessing
                         ? "Memproses..."
                         : "Lanjutkan ke Pembayaran"}
                     </Button>

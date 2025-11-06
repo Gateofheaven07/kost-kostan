@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState } from "react"
+import { useMutation } from "@tanstack/react-query"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
@@ -12,12 +13,37 @@ import { Mail, MessageCircle, Phone, Send, MapPin, Clock, Sparkles } from "lucid
 
 export default function ContactPage() {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     subject: "",
     message: "",
+  })
+
+  const contactMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) throw new Error("Failed to send message")
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({
+        title: "Berhasil",
+        description: "Pesan Anda telah dikirim. Kami akan segera menghubungi Anda.",
+      })
+      setFormData({ name: "", email: "", subject: "", message: "" })
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Gagal mengirim pesan. Silakan coba lagi.",
+        variant: "destructive",
+      })
+    },
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -27,37 +53,7 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-
-    try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      })
-
-      if (response.ok) {
-        toast({
-          title: "Berhasil",
-          description: "Pesan Anda telah dikirim. Kami akan segera menghubungi Anda.",
-        })
-        setFormData({ name: "", email: "", subject: "", message: "" })
-      } else {
-        toast({
-          title: "Error",
-          description: "Gagal mengirim pesan. Silakan coba lagi.",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan. Silakan coba lagi.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
+    contactMutation.mutate(formData)
   }
 
   return (
@@ -166,9 +162,9 @@ export default function ContactPage() {
                       <Button
                         type="submit"
                         className="w-full h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
-                        disabled={loading}
+                        disabled={contactMutation.isPending}
                       >
-                        {loading ? (
+                        {contactMutation.isPending ? (
                           <>
                             <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
                             Mengirim...

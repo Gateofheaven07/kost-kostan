@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -43,11 +44,9 @@ interface Admin {
 export default function AdminsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [admins, setAdmins] = useState<Admin[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [deleteAdminId, setDeleteAdminId] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -57,103 +56,93 @@ export default function AdminsPage() {
     password: "",
   })
 
+  const { data: admins = [], isLoading: loading } = useQuery<Admin[]>({
+    queryKey: ["admins"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/admins")
+      if (!response.ok) throw new Error("Failed to fetch admins")
+      return response.json()
+    },
+    enabled: status === "authenticated" && (session?.user as any)?.role === "SUPER_ADMIN",
+  })
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/signin")
     } else if (status === "authenticated") {
       if ((session.user as any)?.role !== "SUPER_ADMIN") {
         router.push("/admin")
-      } else {
-        fetchAdmins()
       }
     }
   }, [status, session, router])
 
-  const fetchAdmins = async () => {
-    try {
-      const response = await fetch("/api/admin/admins")
-      if (response.ok) {
-        const data = await response.json()
-        setAdmins(data)
-      }
-    } catch (error) {
-      console.error("Error fetching admins:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleCreateAdmin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
+  const createAdminMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
       const response = await fetch("/api/admin/admins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(data),
       })
-
-      if (response.ok) {
-        toast({
-          title: "Berhasil!",
-          description: "Admin baru berhasil dibuat.",
-        })
-        setIsCreateDialogOpen(false)
-        setFormData({ name: "", email: "", phone: "", password: "" })
-        fetchAdmins()
-      } else {
+      if (!response.ok) {
         const error = await response.json()
-        toast({
-          title: "Error",
-          description: error.error || "Gagal membuat admin.",
-          variant: "destructive",
-        })
+        throw new Error(error.error || "Gagal membuat admin.")
       }
-    } catch (error) {
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({
+        title: "Berhasil!",
+        description: "Admin baru berhasil dibuat.",
+      })
+      setIsCreateDialogOpen(false)
+      setFormData({ name: "", email: "", phone: "", password: "" })
+      queryClient.invalidateQueries({ queryKey: ["admins"] })
+    },
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Terjadi kesalahan.",
+        description: error.message || "Terjadi kesalahan.",
         variant: "destructive",
       })
-    } finally {
-      setIsSubmitting(false)
-    }
+    },
+  })
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    createAdminMutation.mutate(formData)
   }
+
+  const deleteAdminMutation = useMutation({
+    mutationFn: async (adminId: string) => {
+      const response = await fetch(`/api/admin/admins/${adminId}`, {
+        method: "DELETE",
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Gagal menghapus admin.")
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({
+        title: "Berhasil!",
+        description: "Admin berhasil dihapus.",
+      })
+      setDeleteAdminId(null)
+      queryClient.invalidateQueries({ queryKey: ["admins"] })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Terjadi kesalahan.",
+        variant: "destructive",
+      })
+    },
+  })
 
   const handleDeleteAdmin = async () => {
     if (!deleteAdminId) return
-    setIsSubmitting(true)
-
-    try {
-      const response = await fetch(`/api/admin/admins/${deleteAdminId}`, {
-        method: "DELETE",
-      })
-
-      if (response.ok) {
-        toast({
-          title: "Berhasil!",
-          description: "Admin berhasil dihapus.",
-        })
-        setDeleteAdminId(null)
-        fetchAdmins()
-      } else {
-        const error = await response.json()
-        toast({
-          title: "Error",
-          description: error.error || "Gagal menghapus admin.",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
+    deleteAdminMutation.mutate(deleteAdminId)
   }
 
   const getInitials = (name: string) => {
@@ -264,12 +253,12 @@ export default function AdminsPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsCreateDialogOpen(false)}
-                    disabled={isSubmitting}
+                    disabled={createAdminMutation.isPending}
                   >
                     Batal
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? "Membuat..." : "Buat Admin"}
+                  <Button type="submit" disabled={createAdminMutation.isPending}>
+                    {createAdminMutation.isPending ? "Membuat..." : "Buat Admin"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -407,13 +396,13 @@ export default function AdminsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Batal</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteAdminMutation.isPending}>Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAdmin}
-              disabled={isSubmitting}
+              disabled={deleteAdminMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isSubmitting ? "Menghapus..." : "Hapus"}
+              {deleteAdminMutation.isPending ? "Menghapus..." : "Hapus"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

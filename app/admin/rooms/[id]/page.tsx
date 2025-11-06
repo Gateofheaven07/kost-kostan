@@ -2,8 +2,9 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter, useParams } from "next/navigation"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,9 +30,7 @@ export default function EditRoomPage() {
   const { toast } = useToast()
   const roomId = params.id as string
 
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [room, setRoom] = useState<Room | null>(null)
+  const queryClient = useQueryClient()
   const [formData, setFormData] = useState({
     name: "",
     floor: 1,
@@ -47,41 +46,31 @@ export default function EditRoomPage() {
     },
   })
 
-  useEffect(() => {
-    const fetchRoom = async () => {
-      try {
-        const response = await fetch(`/api/admin/rooms/${roomId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setRoom(data)
-          setFormData({
-            name: data.name,
-            floor: data.floor,
-            capacity: data.capacity,
-            size: data.size,
-            facilities: data.facilities,
-            isAvailable: data.isAvailable,
-            mainImageUrl: data.mainImageUrl || "",
-            prices: {
-              MONTH: data.prices.find((p: any) => p.period === "MONTH")?.amount || 0,
-              "6MO": data.prices.find((p: any) => p.period === "6MO")?.amount || 0,
-              "12MO": data.prices.find((p: any) => p.period === "12MO")?.amount || 0,
-            },
-          })
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Gagal memuat data kamar",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchRoom()
-  }, [roomId, toast])
+  const { data: room, isLoading: loading } = useQuery<Room>({
+    queryKey: ["admin-room", roomId],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/rooms/${roomId}`)
+      if (!response.ok) throw new Error("Failed to fetch room")
+      return response.json()
+    },
+    enabled: !!roomId,
+    onSuccess: (data) => {
+      setFormData({
+        name: data.name,
+        floor: data.floor,
+        capacity: data.capacity,
+        size: data.size,
+        facilities: data.facilities,
+        isAvailable: data.isAvailable,
+        mainImageUrl: data.mainImageUrl || "",
+        prices: {
+          MONTH: data.prices.find((p: any) => p.period === "MONTH")?.amount || 0,
+          "6MO": data.prices.find((p: any) => p.period === "6MO")?.amount || 0,
+          "12MO": data.prices.find((p: any) => p.period === "12MO")?.amount || 0,
+        },
+      })
+    },
+  })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
@@ -101,45 +90,42 @@ export default function EditRoomPage() {
     }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-
-    try {
+  const updateRoomMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
       const response = await fetch(`/api/admin/rooms/${roomId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(data),
       })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.message) {
-          toast({
-            title: "Berhasil",
-            description: data.message,
-            variant: "default",
-          })
-        } else {
-          toast({ title: "Berhasil", description: "Kamar berhasil diperbarui" })
-        }
-        router.push("/admin/rooms")
-      } else {
+      if (!response.ok) throw new Error("Failed to update room")
+      return response.json()
+    },
+    onSuccess: (data) => {
+      if (data.message) {
         toast({
-          title: "Error",
-          description: "Gagal memperbarui kamar",
-          variant: "destructive",
+          title: "Berhasil",
+          description: data.message,
+          variant: "default",
         })
+      } else {
+        toast({ title: "Berhasil", description: "Kamar berhasil diperbarui" })
       }
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ["admin-rooms"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-room", roomId] })
+      router.push("/admin/rooms")
+    },
+    onError: () => {
       toast({
         title: "Error",
-        description: "Terjadi kesalahan",
+        description: "Gagal memperbarui kamar",
         variant: "destructive",
       })
-    } finally {
-      setSubmitting(false)
-    }
+    },
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    updateRoomMutation.mutate(formData)
   }
 
   if (loading) {
@@ -247,8 +233,8 @@ export default function EditRoomPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Menyimpan..." : "Simpan Perubahan"}
+            <Button type="submit" className="w-full" disabled={updateRoomMutation.isPending}>
+              {updateRoomMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
             </Button>
           </form>
         </CardContent>

@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +14,7 @@ import Link from "next/link"
 export default function NewRoomPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [submitting, setSubmitting] = useState(false)
+  const queryClient = useQueryClient()
   const [formData, setFormData] = useState({
     name: "",
     floor: 1,
@@ -47,36 +48,33 @@ export default function NewRoomPage() {
     }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-
-    try {
+  const createRoomMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
       const response = await fetch("/api/admin/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(data),
       })
-
-      if (response.ok) {
-        toast({ title: "Berhasil", description: "Kamar berhasil ditambahkan" })
-        router.push("/admin/rooms")
-      } else {
-        toast({
-          title: "Error",
-          description: "Gagal menambahkan kamar",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
+      if (!response.ok) throw new Error("Failed to create room")
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({ title: "Berhasil", description: "Kamar berhasil ditambahkan" })
+      queryClient.invalidateQueries({ queryKey: ["admin-rooms"] })
+      router.push("/admin/rooms")
+    },
+    onError: () => {
       toast({
         title: "Error",
-        description: "Terjadi kesalahan",
+        description: "Gagal menambahkan kamar",
         variant: "destructive",
       })
-    } finally {
-      setSubmitting(false)
-    }
+    },
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    createRoomMutation.mutate(formData)
   }
 
   return (
@@ -180,8 +178,8 @@ export default function NewRoomPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Menambahkan..." : "Tambah Kamar"}
+            <Button type="submit" className="w-full" disabled={createRoomMutation.isPending}>
+              {createRoomMutation.isPending ? "Menambahkan..." : "Tambah Kamar"}
             </Button>
           </form>
         </CardContent>

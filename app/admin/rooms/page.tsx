@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,47 +21,39 @@ interface Room {
 
 export default function RoomsPage() {
   const { toast } = useToast()
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    fetchRooms()
-  }, [])
-
-  const fetchRooms = async () => {
-    try {
+  const { data: rooms = [], isLoading: loading } = useQuery<Room[]>({
+    queryKey: ["admin-rooms"],
+    queryFn: async () => {
       const response = await fetch("/api/admin/rooms")
-      if (response.ok) {
-        const data = await response.json()
-        setRooms(data)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal memuat data kamar",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+      if (!response.ok) throw new Error("Failed to fetch rooms")
+      return response.json()
+    },
+  })
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus kamar ini?")) return
-
-    try {
+  const deleteRoomMutation = useMutation({
+    mutationFn: async (id: string) => {
       const response = await fetch(`/api/admin/rooms/${id}`, { method: "DELETE" })
-      if (response.ok) {
-        toast({ title: "Berhasil", description: "Kamar berhasil dihapus" })
-        fetchRooms()
-      }
-    } catch (error) {
+      if (!response.ok) throw new Error("Failed to delete room")
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({ title: "Berhasil", description: "Kamar berhasil dihapus" })
+      queryClient.invalidateQueries({ queryKey: ["admin-rooms"] })
+    },
+    onError: () => {
       toast({
         title: "Error",
         description: "Gagal menghapus kamar",
         variant: "destructive",
       })
-    }
+    },
+  })
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus kamar ini?")) return
+    deleteRoomMutation.mutate(id)
   }
 
   return (
@@ -119,7 +112,12 @@ export default function RoomsPage() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </Link>
-                            <Button variant="destructive" size="sm" onClick={() => handleDelete(room.id)}>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              onClick={() => handleDelete(room.id)}
+                              disabled={deleteRoomMutation.isPending}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>

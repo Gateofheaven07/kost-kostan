@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -27,11 +28,11 @@ import { toast } from "@/components/ui/use-toast"
 export default function ProfilePage() {
   const { data: session, status, update } = useSession()
   const router = useRouter()
+  const queryClient = useQueryClient()
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
   const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const [editForm, setEditForm] = useState({
     name: "",
@@ -57,51 +58,77 @@ export default function ProfilePage() {
     }
   }, [status, session, router])
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: typeof editForm) => {
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(data),
       })
-
-      if (response.ok) {
-        // Refresh session to get updated data
-        await update()
-        
-        // Wait a bit for session to update
-        setTimeout(() => {
-          toast({
-            title: "Berhasil!",
-            description: "Profile berhasil diperbarui.",
-          })
-          setIsEditDialogOpen(false)
-          setIsSubmitting(false)
-          
-          // Force reload to show changes
-          router.refresh()
-        }, 500)
-      } else {
+      if (!response.ok) {
         const error = await response.json()
-        toast({
-          title: "Error",
-          description: error.error || "Gagal memperbarui profile.",
-          variant: "destructive",
-        })
-        setIsSubmitting(false)
+        throw new Error(error.error || "Gagal memperbarui profile.")
       }
-    } catch (error) {
+      return response.json()
+    },
+    onSuccess: async () => {
+      await update()
+      setTimeout(() => {
+        toast({
+          title: "Berhasil!",
+          description: "Profile berhasil diperbarui.",
+        })
+        setIsEditDialogOpen(false)
+        router.refresh()
+      }, 500)
+    },
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Terjadi kesalahan.",
+        description: error.message || "Terjadi kesalahan.",
         variant: "destructive",
       })
-      setIsSubmitting(false)
-    }
+    },
+  })
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    updateProfileMutation.mutate(editForm)
   }
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      const response = await fetch("/api/user/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Gagal mengubah password.")
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({
+        title: "Berhasil!",
+        description: "Password berhasil diubah.",
+      })
+      setIsPasswordDialogOpen(false)
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Terjadi kesalahan.",
+        variant: "destructive",
+      })
+    },
+  })
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -115,46 +142,10 @@ export default function ProfilePage() {
       return
     }
 
-    setIsSubmitting(true)
-
-    try {
-      const response = await fetch("/api/user/password", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword,
-        }),
-      })
-
-      if (response.ok) {
-        toast({
-          title: "Berhasil!",
-          description: "Password berhasil diubah.",
-        })
-        setIsPasswordDialogOpen(false)
-        setPasswordForm({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        })
-      } else {
-        const error = await response.json()
-        toast({
-          title: "Error",
-          description: error.error || "Gagal mengubah password.",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
+    changePasswordMutation.mutate({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    })
   }
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,51 +204,43 @@ export default function ProfilePage() {
     }
   }
 
-  const handleUploadPhoto = async () => {
-    if (!photoPreview) return
-    setIsSubmitting(true)
-
-    try {
+  const uploadPhotoMutation = useMutation({
+    mutationFn: async (photo: string) => {
       const response = await fetch("/api/user/photo", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photo: photoPreview }),
+        body: JSON.stringify({ photo }),
       })
-
-      if (response.ok) {
-        // Refresh session to get updated photo
-        await update()
-        
-        // Wait a bit for session to update
-        setTimeout(() => {
-          toast({
-            title: "Berhasil!",
-            description: "Foto profile berhasil diperbarui.",
-          })
-          setIsPhotoDialogOpen(false)
-          setPhotoPreview(null)
-          setIsSubmitting(false)
-          
-          // Force reload to show changes
-          router.refresh()
-        }, 500)
-      } else {
+      if (!response.ok) {
         const error = await response.json()
-        toast({
-          title: "Error",
-          description: error.error || "Gagal mengupload foto.",
-          variant: "destructive",
-        })
-        setIsSubmitting(false)
+        throw new Error(error.error || "Gagal mengupload foto.")
       }
-    } catch (error) {
+      return response.json()
+    },
+    onSuccess: async () => {
+      await update()
+      setTimeout(() => {
+        toast({
+          title: "Berhasil!",
+          description: "Foto profile berhasil diperbarui.",
+        })
+        setIsPhotoDialogOpen(false)
+        setPhotoPreview(null)
+        router.refresh()
+      }, 500)
+    },
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Terjadi kesalahan.",
+        description: error.message || "Terjadi kesalahan.",
         variant: "destructive",
       })
-      setIsSubmitting(false)
-    }
+    },
+  })
+
+  const handleUploadPhoto = async () => {
+    if (!photoPreview) return
+    uploadPhotoMutation.mutate(photoPreview)
   }
 
   if (status === "loading") {
@@ -515,12 +498,12 @@ export default function ProfilePage() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}
-                disabled={isSubmitting}
+                disabled={updateProfileMutation.isPending}
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Menyimpan..." : "Simpan"}
+              <Button type="submit" disabled={updateProfileMutation.isPending}>
+                {updateProfileMutation.isPending ? "Menyimpan..." : "Simpan"}
               </Button>
             </DialogFooter>
           </form>
@@ -589,12 +572,12 @@ export default function ProfilePage() {
                     confirmPassword: "",
                   })
                 }}
-                disabled={isSubmitting}
+                disabled={changePasswordMutation.isPending}
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Mengubah..." : "Ubah Password"}
+              <Button type="submit" disabled={changePasswordMutation.isPending}>
+                {changePasswordMutation.isPending ? "Mengubah..." : "Ubah Password"}
               </Button>
             </DialogFooter>
           </form>
@@ -640,15 +623,15 @@ export default function ProfilePage() {
                 setIsPhotoDialogOpen(false)
                 setPhotoPreview(null)
               }}
-              disabled={isSubmitting}
+              disabled={uploadPhotoMutation.isPending}
             >
               Batal
             </Button>
             <Button
               onClick={handleUploadPhoto}
-              disabled={!photoPreview || isSubmitting}
+              disabled={!photoPreview || uploadPhotoMutation.isPending}
             >
-              {isSubmitting ? "Mengupload..." : "Upload"}
+              {uploadPhotoMutation.isPending ? "Mengupload..." : "Upload"}
             </Button>
           </DialogFooter>
         </DialogContent>
