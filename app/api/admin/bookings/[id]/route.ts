@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/lib/auth-utils"
 import { prisma } from "@/lib/prisma"
 import { type NextRequest, NextResponse } from "next/server"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -71,10 +71,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // Revalidate Next.js cache untuk halaman public ketika room status berubah
     if (updatedBooking?.room) {
-      revalidatePath("/rooms")
+      revalidatePath("/rooms", "page")
       if (updatedBooking.room.slug) {
-        revalidatePath(`/rooms/${updatedBooking.room.slug}`)
+        revalidatePath(`/rooms/${updatedBooking.room.slug}`, "page")
       }
+      revalidateTag("rooms")
+      revalidateTag(`room-${updatedBooking.room.id}`)
     }
 
     return NextResponse.json(updatedBooking, {

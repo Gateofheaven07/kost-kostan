@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/auth-utils"
 import { prisma } from "@/lib/prisma"
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 const roomSchema = z.object({
   name: z.string().min(1),
@@ -62,10 +62,12 @@ export async function POST(request: NextRequest) {
     })
 
     // Revalidate Next.js cache untuk halaman public
-    revalidatePath("/rooms")
+    revalidatePath("/rooms", "page")
     if (room.slug) {
-      revalidatePath(`/rooms/${room.slug}`)
+      revalidatePath(`/rooms/${room.slug}`, "page")
     }
+    revalidateTag("rooms")
+    revalidateTag(`room-${room.id}`)
 
     return NextResponse.json(room, { 
       status: 201,

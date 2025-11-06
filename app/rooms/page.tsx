@@ -29,12 +29,25 @@ export default function RoomsPage() {
   const { data: rooms = [], isLoading: loading } = useQuery<Room[]>({
     queryKey: ["rooms"],
     queryFn: async () => {
-      const response = await fetch(`/api/rooms`, {
+      // Add timestamp to bust cache
+      const timestamp = new Date().getTime()
+      const response = await fetch(`/api/rooms?t=${timestamp}`, {
         cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
       })
       if (!response.ok) throw new Error("Failed to fetch rooms")
       return response.json()
     },
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache in memory
+    refetchOnMount: true, // Always refetch on mount
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnReconnect: true, // Refetch when reconnecting
+    refetchInterval: 10000, // Refetch every 10 seconds to ensure real-time updates (only when tab is active)
+    refetchIntervalInBackground: false, // Don't refetch when tab is in background
   })
 
   return (

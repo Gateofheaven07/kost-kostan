@@ -42,10 +42,12 @@ export default function RoomsPage() {
       toast({ title: "Berhasil", description: "Kamar berhasil dihapus" })
       // Invalidate admin queries
       queryClient.invalidateQueries({ queryKey: ["admin-rooms"] })
-      // Invalidate public rooms query to update UI website
+      // Invalidate public rooms query to update UI website - force refetch
       queryClient.invalidateQueries({ queryKey: ["rooms"] })
+      queryClient.refetchQueries({ queryKey: ["rooms"] }) // Force immediate refetch
       // Also invalidate any room detail queries
       queryClient.invalidateQueries({ queryKey: ["room"] })
+      queryClient.refetchQueries({ queryKey: ["room"] }) // Force immediate refetch
     },
     onError: () => {
       toast({

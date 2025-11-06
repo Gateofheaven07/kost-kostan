@@ -113,10 +113,12 @@ export default function EditRoomPage() {
       // Invalidate admin queries
       queryClient.invalidateQueries({ queryKey: ["admin-rooms"] })
       queryClient.invalidateQueries({ queryKey: ["admin-room", roomId] })
-      // Invalidate public rooms query to update UI website
+      // Invalidate public rooms query to update UI website - force refetch
       queryClient.invalidateQueries({ queryKey: ["rooms"] })
+      queryClient.refetchQueries({ queryKey: ["rooms"] }) // Force immediate refetch
       // Also invalidate any room detail queries
       queryClient.invalidateQueries({ queryKey: ["room"] })
+      queryClient.refetchQueries({ queryKey: ["room"] }) // Force immediate refetch
       router.push("/admin/rooms")
     },
     onError: () => {

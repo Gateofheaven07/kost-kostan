@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/lib/auth-utils"
 import { prisma } from "@/lib/prisma"
 import { type NextRequest, NextResponse } from "next/server"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -96,8 +96,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     })
 
     // Revalidate Next.js cache untuk halaman public
-    revalidatePath("/rooms")
-    revalidatePath(`/rooms/${updatedRoom?.slug}`)
+    revalidatePath("/rooms", "page")
+    revalidatePath(`/rooms/${updatedRoom?.slug}`, "page")
+    revalidateTag("rooms")
+    revalidateTag(`room-${updatedRoom?.id}`)
 
     return NextResponse.json({
       ...updatedRoom,
@@ -126,10 +128,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await prisma.room.delete({ where: { id } })
 
     // Revalidate Next.js cache untuk halaman public
-    revalidatePath("/rooms")
+    revalidatePath("/rooms", "page")
     if (room?.slug) {
-      revalidatePath(`/rooms/${room.slug}`)
+      revalidatePath(`/rooms/${room.slug}`, "page")
     }
+    revalidateTag("rooms")
 
     return NextResponse.json({ message: "Kamar berhasil dihapus" }, {
       headers: {
