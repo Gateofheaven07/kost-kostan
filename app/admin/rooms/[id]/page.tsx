@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
@@ -45,6 +45,7 @@ export default function EditRoomPage() {
       "12MO": 0,
     },
   })
+  const [isFormInitialized, setIsFormInitialized] = useState(false)
 
   const { data: room, isLoading: loading } = useQuery<Room>({
     queryKey: ["admin-room", roomId],
@@ -54,23 +55,33 @@ export default function EditRoomPage() {
       return response.json()
     },
     enabled: !!roomId,
-    onSuccess: (data) => {
+  })
+
+  // Reset form initialization when roomId changes
+  useEffect(() => {
+    setIsFormInitialized(false)
+  }, [roomId])
+
+  // Only initialize form data once when room data is first loaded
+  useEffect(() => {
+    if (room && !isFormInitialized) {
       setFormData({
-        name: data.name,
-        floor: data.floor,
-        capacity: data.capacity,
-        size: data.size,
-        facilities: data.facilities,
-        isAvailable: data.isAvailable,
-        mainImageUrl: data.mainImageUrl || "",
+        name: room.name,
+        floor: room.floor,
+        capacity: room.capacity,
+        size: room.size,
+        facilities: room.facilities,
+        isAvailable: room.isAvailable,
+        mainImageUrl: room.mainImageUrl || "",
         prices: {
-          MONTH: data.prices.find((p: any) => p.period === "MONTH")?.amount || 0,
-          "6MO": data.prices.find((p: any) => p.period === "6MO")?.amount || 0,
-          "12MO": data.prices.find((p: any) => p.period === "12MO")?.amount || 0,
+          MONTH: room.prices.find((p: any) => p.period === "MONTH")?.amount || 0,
+          "6MO": room.prices.find((p: any) => p.period === "6MO")?.amount || 0,
+          "12MO": room.prices.find((p: any) => p.period === "12MO")?.amount || 0,
         },
       })
-    },
-  })
+      setIsFormInitialized(true)
+    }
+  }, [room, isFormInitialized, roomId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
@@ -110,7 +121,7 @@ export default function EditRoomPage() {
       } else {
         toast({ title: "Berhasil", description: "Kamar berhasil diperbarui" })
       }
-      // Invalidate admin queries
+      // Invalidate admin queries (but don't refetch to avoid overwriting form)
       queryClient.invalidateQueries({ queryKey: ["admin-rooms"] })
       queryClient.invalidateQueries({ queryKey: ["admin-room", roomId] })
       // Invalidate public rooms query to update UI website - force refetch
