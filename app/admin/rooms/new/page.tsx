@@ -60,7 +60,10 @@ export default function NewRoomPage() {
     },
     onSuccess: () => {
       toast({ title: "Berhasil", description: "Kamar berhasil ditambahkan" })
+      // Invalidate admin queries
       queryClient.invalidateQueries({ queryKey: ["admin-rooms"] })
+      // Invalidate public rooms query to update UI website
+      queryClient.invalidateQueries({ queryKey: ["rooms"] })
       router.push("/admin/rooms")
     },
     onError: () => {
