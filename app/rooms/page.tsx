@@ -93,6 +93,9 @@ export default function RoomsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {rooms.map((room) => {
                   const monthlyPrice = room.prices.find((p) => p.period === period)?.amount || 0
+                  // Determine room type from name
+                  const isPremium = room.name.toLowerCase().includes("premium")
+                  const bathroomType = isPremium ? "Kamar Mandi Dalam" : "Kamar Mandi Luar"
                   return (
                     <Link key={room.id} href={`/rooms/${room.slug}`}>
                       <Card className="group h-full bg-white border border-gray-200 hover:border-red-600/50 transition-all hover:shadow-2xl rounded-2xl overflow-hidden">
@@ -166,7 +169,7 @@ export default function RoomsPage() {
                               <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center">
                                 <Bath className="h-4 w-4 text-red-600" />
                               </div>
-                              <span className="font-medium">Kamar Mandi</span>
+                              <span className="font-medium">{bathroomType}</span>
                             </div>
                             <div className="flex items-center gap-3 text-sm text-gray-700">
                               <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center">

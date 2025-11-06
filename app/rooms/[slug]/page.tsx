@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { prisma } from "@/lib/prisma"
 import { syncRoomAvailability } from "@/lib/sync-room-availability"
-import { Wifi, Users, DoorOpen, MapPin } from "lucide-react"
+import { Wifi, Users, DoorOpen, MapPin, Bath } from "lucide-react"
 
 interface RoomDetailPageProps {
   params: Promise<{ slug: string }>
@@ -34,6 +34,10 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
   }
 
   const facilities = JSON.parse(room.facilities || "[]")
+  
+  // Determine room type from name
+  const isPremium = room.name.toLowerCase().includes("premium")
+  const bathroomType = isPremium ? "Kamar Mandi Dalam" : "Kamar Mandi Luar"
 
   return (
     <>
@@ -92,6 +96,10 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
                   <div className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
                     <span>Lantai: {room.floor}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Bath className="h-5 w-5" />
+                    <span>{bathroomType}</span>
                   </div>
                 </div>
 
