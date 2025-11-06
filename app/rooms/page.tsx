@@ -160,25 +160,25 @@ export default function RoomsPage() {
                           {/* Features */}
                           <div className="space-y-3">
                             <div className="flex items-center gap-3 text-sm text-gray-700">
-                              <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center">
+                              <div className="w-8 h-8 aspect-square rounded-lg bg-red-600/10 flex items-center justify-center flex-shrink-0">
                                 <Bed className="h-4 w-4 text-red-600" />
                               </div>
                               <span className="font-medium">{room.capacity} Kamar Tidur</span>
                             </div>
                             <div className="flex items-center gap-3 text-sm text-gray-700">
-                              <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center">
+                              <div className="w-8 h-8 aspect-square rounded-lg bg-red-600/10 flex items-center justify-center flex-shrink-0">
                                 <Bath className="h-4 w-4 text-red-600" />
                               </div>
                               <span className="font-medium">{bathroomType}</span>
                             </div>
                             <div className="flex items-center gap-3 text-sm text-gray-700">
-                              <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center">
+                              <div className="w-8 h-8 aspect-square rounded-lg bg-red-600/10 flex items-center justify-center flex-shrink-0">
                                 <Square className="h-4 w-4 text-red-600" />
                               </div>
                               <span className="font-medium">{room.size}</span>
                             </div>
                             <div className="flex items-center gap-3 text-sm text-gray-700">
-                              <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center">
+                              <div className="w-8 h-8 aspect-square rounded-lg bg-red-600/10 flex items-center justify-center flex-shrink-0">
                                 <Wifi className="h-4 w-4 text-red-600" />
                               </div>
                               <span className="font-medium truncate">{room.facilities}</span>
