@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { revalidatePath } from "next/cache"
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,6 +102,13 @@ export async function POST(request: NextRequest) {
           data: { isAvailable: false },
         }),
       ])
+      
+      // Revalidate Next.js cache untuk halaman public
+      revalidatePath("/rooms")
+      if (payment.booking.room.slug) {
+        revalidatePath(`/rooms/${payment.booking.room.slug}`)
+      }
+      
       console.log(`[Webhook] Booking ${payment.bookingId} confirmed and room ${payment.booking.roomId} marked as rented`)
     }
 

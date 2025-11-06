@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { revalidatePath } from "next/cache"
 import crypto from "crypto"
 
 /**
@@ -159,6 +160,13 @@ export async function POST(request: NextRequest) {
           ])
           bookingStatusUpdated = true
           newBookingStatus = "CONFIRMED"
+          
+          // Revalidate Next.js cache untuk halaman public
+          revalidatePath("/rooms")
+          if (payment.booking.room.slug) {
+            revalidatePath(`/rooms/${payment.booking.room.slug}`)
+          }
+          
           console.log("[Webhook] ✅ Booking confirmed and room marked as rented:", {
             bookingId: payment.bookingId,
             roomId: payment.booking.roomId,

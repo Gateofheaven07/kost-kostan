@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth-utils"
 import { prisma } from "@/lib/prisma"
 import { type NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -94,11 +95,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       include: { prices: true },
     })
 
+    // Revalidate Next.js cache untuk halaman public
+    revalidatePath("/rooms")
+    revalidatePath(`/rooms/${updatedRoom?.slug}`)
+
     return NextResponse.json({
       ...updatedRoom,
       message: hasActiveBookings
         ? `${activeBookingCount} booking CONFIRMED aktif telah dibatalkan otomatis untuk mengubah status kamar menjadi tersedia`
         : "Kamar berhasil diperbarui",
+    }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
     })
   } catch (error) {
     return NextResponse.json({ error: "Gagal memperbarui kamar" }, { status: 500 })
@@ -110,9 +121,23 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await requireAdmin()
     const { id } = await params
 
+    const room = await prisma.room.findUnique({ where: { id }, select: { slug: true } })
+    
     await prisma.room.delete({ where: { id } })
 
-    return NextResponse.json({ message: "Kamar berhasil dihapus" })
+    // Revalidate Next.js cache untuk halaman public
+    revalidatePath("/rooms")
+    if (room?.slug) {
+      revalidatePath(`/rooms/${room.slug}`)
+    }
+
+    return NextResponse.json({ message: "Kamar berhasil dihapus" }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
+    })
   } catch (error) {
     return NextResponse.json({ error: "Gagal menghapus kamar" }, { status: 500 })
   }

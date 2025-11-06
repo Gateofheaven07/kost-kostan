@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/auth-utils"
 import { prisma } from "@/lib/prisma"
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { revalidatePath } from "next/cache"
 
 const roomSchema = z.object({
   name: z.string().min(1),
@@ -60,7 +61,20 @@ export async function POST(request: NextRequest) {
       include: { prices: true },
     })
 
-    return NextResponse.json(room, { status: 201 })
+    // Revalidate Next.js cache untuk halaman public
+    revalidatePath("/rooms")
+    if (room.slug) {
+      revalidatePath(`/rooms/${room.slug}`)
+    }
+
+    return NextResponse.json(room, { 
+      status: 201,
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
+    })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Data tidak valid" }, { status: 400 })

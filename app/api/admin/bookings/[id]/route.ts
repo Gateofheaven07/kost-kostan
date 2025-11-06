@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth-utils"
 import { prisma } from "@/lib/prisma"
 import { type NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -68,7 +69,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       include: { room: true },
     })
 
-    return NextResponse.json(updatedBooking)
+    // Revalidate Next.js cache untuk halaman public ketika room status berubah
+    if (updatedBooking?.room) {
+      revalidatePath("/rooms")
+      if (updatedBooking.room.slug) {
+        revalidatePath(`/rooms/${updatedBooking.room.slug}`)
+      }
+    }
+
+    return NextResponse.json(updatedBooking, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
+    })
   } catch (error) {
     console.error("Error updating booking:", error)
     return NextResponse.json({ error: "Gagal memperbarui booking" }, { status: 500 })
