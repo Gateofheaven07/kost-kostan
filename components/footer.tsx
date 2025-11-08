@@ -43,7 +43,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <MessageCircle className="h-4 w-4 text-red-600" />
-                <span>WhatsApp</span>
+                <span>WhatsApp +62 895-1446-1882</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-red-600" />

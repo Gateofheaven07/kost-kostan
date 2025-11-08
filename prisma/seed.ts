@@ -26,7 +26,7 @@ async function main() {
         "Kost nyaman dengan lokasi strategis dekat pusat kota Bogor dan Universitas IPB, Aka Kost menawarkan hunian nyaman dengan fasilitas lengkap kamar rapi, kamar mandi bersih, Wi-Fi cepat, area parkir, dapur bersama, serta keamanan terjaga. Akses mudah ke kampus, transportasi umum, dan pusat belanja membuat aktivitas harian lebih praktis. Semua kenyamanan ini hadir dengan harga terjangkau, cocok untuk mahasiswa maupun pekerja.",
       rules:
         "1. Jam malam pukul 22:00\n2. Tidak boleh membawa tamu lawan jenis ke kamar\n3. Menjaga kebersihan area umum\n4. Tidak boleh membuat keributan\n5. Bayar tepat waktu",
-      facilities: JSON.stringify(["WiFi Gratis", "Listrik 24 Jam", "Air Panas", "Parkir Motor", "Keamanan 24 Jam"]),
+      facilities: JSON.stringify(["WiFi Gratis", "Listrik 24 Jam", "Parkir Motor", "Keamanan 24 Jam"]),
       contactPhone: "+62 895-1446-1882",
       contactWhatsApp: "+62 895-1446-1882",
       email: "akakost@gmail.com",
