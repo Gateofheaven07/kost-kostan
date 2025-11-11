@@ -46,6 +46,7 @@ export default function ProfilePage() {
   })
   
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -151,12 +152,14 @@ export default function ProfilePage() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      setSelectedFileName(file.name)
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
         toast({
           title: "Error",
           description: "Ukuran file maksimal 2MB.",
           variant: "destructive",
         })
+        setSelectedFileName(null)
         return
       }
 
@@ -607,12 +610,36 @@ export default function ProfilePage() {
                   </AvatarFallback>
                 </Avatar>
               )}
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="max-w-xs"
-              />
+              <div className="flex flex-col items-center gap-2 w-full max-w-xs">
+                <label className="w-full">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                    id="photo-upload"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 cursor-pointer"
+                    onClick={() => document.getElementById('photo-upload')?.click()}
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    Pilih File
+                  </Button>
+                </label>
+                {selectedFileName && (
+                  <p className="text-xs text-gray-600 text-center font-medium truncate w-full max-w-xs">
+                    {selectedFileName}
+                  </p>
+                )}
+                {!selectedFileName && (
+                  <p className="text-xs text-gray-400 text-center">
+                    Belum ada file dipilih
+                  </p>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -622,6 +649,7 @@ export default function ProfilePage() {
               onClick={() => {
                 setIsPhotoDialogOpen(false)
                 setPhotoPreview(null)
+                setSelectedFileName(null)
               }}
               disabled={uploadPhotoMutation.isPending}
             >

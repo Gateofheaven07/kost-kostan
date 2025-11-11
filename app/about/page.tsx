@@ -10,7 +10,28 @@ export default async function AboutPage() {
   const kost = await prisma.kost.findFirst()
   const owner = await prisma.owner.findFirst()
 
-  const facilities = kost ? JSON.parse(kost.facilities || "[]") : []
+  // Parse facilities dengan handle nested array
+  let facilities: string[] = []
+  if (kost) {
+    try {
+      let parsed = JSON.parse(kost.facilities || "[]")
+      // Handle nested arrays
+      while (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
+        parsed = parsed[0]
+      }
+      // Ensure it's an array of strings
+      if (Array.isArray(parsed)) {
+        facilities = parsed
+          .flat()
+          .filter((f: any) => f && typeof f === "string" && f.trim() !== "")
+          .map((f: string) => f.trim())
+      } else if (typeof parsed === "string") {
+        facilities = [parsed]
+      }
+    } catch {
+      facilities = []
+    }
+  }
 
   return (
     <>

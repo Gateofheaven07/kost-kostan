@@ -33,7 +33,66 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
     notFound()
   }
 
-  const facilities = JSON.parse(room.facilities || "[]")
+  // Parse facilities dengan handle nested array dan double-stringified
+  const parseAndFlatten = (data: any, depth: number = 0): string[] => {
+    if (depth > 5) return []
+    
+    if (Array.isArray(data)) {
+      const result: string[] = []
+      for (const item of data) {
+        if (typeof item === "string") {
+          const trimmed = item.trim()
+          if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || 
+              (trimmed.startsWith("{") && trimmed.endsWith("}"))) {
+            try {
+              const parsed = JSON.parse(item)
+              result.push(...parseAndFlatten(parsed, depth + 1))
+            } catch {
+              if (trimmed !== "") {
+                result.push(trimmed)
+              }
+            }
+          } else {
+            if (trimmed !== "") {
+              result.push(trimmed)
+            }
+          }
+        } else if (Array.isArray(item)) {
+          result.push(...parseAndFlatten(item, depth + 1))
+        } else if (item !== null && item !== undefined) {
+          const str = String(item).trim()
+          if (str !== "") {
+            result.push(str)
+          }
+        }
+      }
+      return result
+    }
+    
+    if (typeof data === "string") {
+      const trimmed = data.trim()
+      if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || 
+          (trimmed.startsWith("{") && trimmed.endsWith("}"))) {
+        try {
+          const parsed = JSON.parse(data)
+          return parseAndFlatten(parsed, depth + 1)
+        } catch {
+          return trimmed !== "" ? [trimmed] : []
+        }
+      }
+      return trimmed !== "" ? [trimmed] : []
+    }
+    
+    return []
+  }
+
+  let facilities: string[] = []
+  try {
+    const parsed = JSON.parse(room.facilities || "[]")
+    facilities = parseAndFlatten(parsed)
+  } catch {
+    facilities = []
+  }
   
   // Determine room type from name
   const isPremium = room.name.toLowerCase().includes("premium")

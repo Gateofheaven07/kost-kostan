@@ -23,6 +23,113 @@ interface Room {
   prices: Array<{ period: string; amount: number }>
 }
 
+function formatFacilities(facilitiesString: string): string {
+  if (!facilitiesString || facilitiesString.trim() === "") {
+    return ""
+  }
+
+  // Helper function untuk recursively parse dan flatten
+  const parseAndFlatten = (data: any, depth: number = 0): string[] => {
+    // Prevent infinite recursion
+    if (depth > 5) {
+      return []
+    }
+
+    // Jika data adalah array
+    if (Array.isArray(data)) {
+      const result: string[] = []
+      for (const item of data) {
+        if (typeof item === "string") {
+          // Jika string terlihat seperti JSON (double-stringified), coba parse lagi
+          const trimmed = item.trim()
+          if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || 
+              (trimmed.startsWith("{") && trimmed.endsWith("}"))) {
+            try {
+              const parsed = JSON.parse(item)
+              result.push(...parseAndFlatten(parsed, depth + 1))
+            } catch {
+              // Jika parse gagal, gunakan string asli
+              if (trimmed !== "") {
+                result.push(trimmed)
+              }
+            }
+          } else {
+            // String biasa, tambahkan jika tidak kosong
+            if (trimmed !== "") {
+              result.push(trimmed)
+            }
+          }
+        } else if (Array.isArray(item)) {
+          // Nested array, recurse
+          result.push(...parseAndFlatten(item, depth + 1))
+        } else if (item !== null && item !== undefined) {
+          // Convert to string
+          const str = String(item).trim()
+          if (str !== "") {
+            result.push(str)
+          }
+        }
+      }
+      return result
+    }
+    
+    // Jika data adalah string
+    if (typeof data === "string") {
+      const trimmed = data.trim()
+      // Jika string terlihat seperti JSON, coba parse
+      if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || 
+          (trimmed.startsWith("{") && trimmed.endsWith("}"))) {
+        try {
+          const parsed = JSON.parse(data)
+          return parseAndFlatten(parsed, depth + 1)
+        } catch {
+          return trimmed !== "" ? [trimmed] : []
+        }
+      }
+      return trimmed !== "" ? [trimmed] : []
+    }
+    
+    return []
+  }
+
+  try {
+    // Coba parse sebagai JSON
+    const parsed = JSON.parse(facilitiesString)
+    const facilities = parseAndFlatten(parsed)
+    return facilities.length > 0 ? facilities.join(", ") : ""
+  } catch {
+    // Jika bukan JSON valid, coba extract dari string
+    // Handle kasus seperti: ["[\"Wifi\", \"Kasur\"]"]
+    if (facilitiesString.includes("[") && facilitiesString.includes("]")) {
+      try {
+        // Coba extract semua array dari string
+        const arrayMatches = facilitiesString.matchAll(/\[(.*?)\]/g)
+        const allItems: string[] = []
+        
+        for (const match of arrayMatches) {
+          if (match[1]) {
+            // Split by comma, handle quoted strings
+            const items = match[1]
+              .split(/,/)
+              .map(s => s.trim().replace(/^["']|["']$/g, "").trim())
+              .filter(s => s !== "")
+            allItems.push(...items)
+          }
+        }
+        
+        if (allItems.length > 0) {
+          return allItems.join(", ")
+        }
+      } catch {
+        // Ignore
+      }
+    }
+    
+    // Jika semua gagal, return string asli (mungkin sudah dalam format yang benar)
+    return facilitiesString
+  }
+}
+
 export default function RoomsPage() {
   const period = "MONTH" // Default period untuk menampilkan harga
 
@@ -181,7 +288,7 @@ export default function RoomsPage() {
                               <div className="w-8 h-8 aspect-square rounded-lg bg-red-600/10 flex items-center justify-center flex-shrink-0">
                                 <Wifi className="h-4 w-4 text-red-600" />
                               </div>
-                              <span className="font-medium truncate">{room.facilities}</span>
+                                <span className="font-medium truncate">{formatFacilities(room.facilities)}</span>
                             </div>
                           </div>
 
