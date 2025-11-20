@@ -65,12 +65,30 @@ export default function EditRoomPage() {
   // Only initialize form data once when room data is first loaded
   useEffect(() => {
     if (room && !isFormInitialized) {
+      // Parse facilities from JSON string to comma-separated string
+      let facilitiesString = ""
+      try {
+        if (room.facilities) {
+          const parsed = JSON.parse(room.facilities)
+          if (Array.isArray(parsed)) {
+            facilitiesString = parsed.join(", ")
+          } else if (typeof parsed === "string") {
+            facilitiesString = parsed
+          } else {
+            facilitiesString = room.facilities
+          }
+        }
+      } catch {
+        // If not JSON, use as is
+        facilitiesString = room.facilities || ""
+      }
+
       setFormData({
         name: room.name,
         floor: room.floor,
         capacity: room.capacity,
         size: room.size,
-        facilities: room.facilities,
+        facilities: facilitiesString,
         isAvailable: room.isAvailable,
         mainImageUrl: room.mainImageUrl || "",
         prices: {
@@ -108,8 +126,11 @@ export default function EditRoomPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-      if (!response.ok) throw new Error("Failed to update room")
-      return response.json()
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update room")
+      }
+      return result
     },
     onSuccess: (data) => {
       if (data.message) {
@@ -132,10 +153,10 @@ export default function EditRoomPage() {
       queryClient.refetchQueries({ queryKey: ["room"] }) // Force immediate refetch
       router.push("/admin/rooms")
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Gagal memperbarui kamar",
+        description: error.message || "Gagal memperbarui kamar",
         variant: "destructive",
       })
     },

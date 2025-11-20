@@ -31,6 +31,33 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json()
     const { name, floor, capacity, size, facilities, isAvailable, mainImageUrl, prices } = body
 
+    // Validate required fields
+    if (!name || !floor || !capacity || !size) {
+      return NextResponse.json(
+        { error: "Nama, lantai, kapasitas, dan ukuran harus diisi" },
+        { status: 400 }
+      )
+    }
+
+    // Validate prices
+    if (!prices || typeof prices !== "object") {
+      return NextResponse.json(
+        { error: "Harga harus diisi" },
+        { status: 400 }
+      )
+    }
+
+    // Process facilities - handle both string and array
+    let facilitiesArray: string[] = []
+    if (facilities) {
+      if (typeof facilities === "string") {
+        // Split by comma and trim
+        facilitiesArray = facilities.split(",").map((f: string) => f.trim()).filter((f: string) => f !== "")
+      } else if (Array.isArray(facilities)) {
+        facilitiesArray = facilities.map((f: any) => String(f).trim()).filter((f: string) => f !== "")
+      }
+    }
+
     // Check if there are active CONFIRMED bookings when admin tries to make room available
     let hasActiveBookings = false
     let activeBookingCount = 0
@@ -72,22 +99,25 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       where: { id },
       data: {
         name,
-        floor,
-        capacity,
+        floor: Number(floor),
+        capacity: Number(capacity),
         size,
-        facilities: JSON.stringify(facilities.split(",").map((f: string) => f.trim())),
-        isAvailable,
+        facilities: JSON.stringify(facilitiesArray),
+        isAvailable: Boolean(isAvailable),
         mainImageUrl: mainImageUrl || null,
       },
     })
 
     // Update prices
     for (const [period, amount] of Object.entries(prices)) {
-      await prisma.price.upsert({
-        where: { roomId_period: { roomId: id, period } },
-        update: { amount: amount as number },
-        create: { roomId: id, period, amount: amount as number },
-      })
+      const priceAmount = Number(amount)
+      if (!isNaN(priceAmount) && priceAmount >= 0) {
+        await prisma.price.upsert({
+          where: { roomId_period: { roomId: id, period } },
+          update: { amount: priceAmount },
+          create: { roomId: id, period, amount: priceAmount },
+        })
+      }
     }
 
     const updatedRoom = await prisma.room.findUnique({
@@ -95,11 +125,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       include: { prices: true },
     })
 
+    if (!updatedRoom) {
+      return NextResponse.json({ error: "Kamar tidak ditemukan setelah update" }, { status: 404 })
+    }
+
     // Revalidate Next.js cache untuk halaman public
     revalidatePath("/rooms", "page")
-    revalidatePath(`/rooms/${updatedRoom?.slug}`, "page")
+    revalidatePath(`/rooms/${updatedRoom.slug}`, "page")
     revalidateTag("rooms")
-    revalidateTag(`room-${updatedRoom?.id}`)
+    revalidateTag(`room-${updatedRoom.id}`)
 
     return NextResponse.json({
       ...updatedRoom,
@@ -113,8 +147,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         "Expires": "0",
       },
     })
-  } catch (error) {
-    return NextResponse.json({ error: "Gagal memperbarui kamar" }, { status: 500 })
+  } catch (error: any) {
+    console.error("Error updating room:", error)
+    return NextResponse.json(
+      { 
+        error: error.message || "Gagal memperbarui kamar",
+        details: process.env.NODE_ENV === "development" ? error.stack : undefined
+      },
+      { status: 500 }
+    )
   }
 }
 
