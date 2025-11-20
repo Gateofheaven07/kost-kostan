@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 
+// PATCH: update status booking
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin()
@@ -89,5 +90,66 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } catch (error) {
     console.error("Error updating booking:", error)
     return NextResponse.json({ error: "Gagal memperbarui booking" }, { status: 500 })
+  }
+}
+
+// DELETE: hapus booking (riwayat)
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    await requireAdmin()
+    const { id } = await params
+
+    // Ambil booking beserta kamar terkait
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { room: true },
+    })
+
+    if (!booking) {
+      return NextResponse.json({ error: "Booking tidak ditemukan" }, { status: 404 })
+    }
+
+    // Hapus booking terlebih dahulu
+    await prisma.booking.delete({ where: { id } })
+
+    // Setelah dihapus, cek apakah masih ada booking CONFIRMED lain untuk kamar ini
+    if (booking.room) {
+      const activeBookings = await prisma.booking.count({
+        where: {
+          roomId: booking.roomId,
+          status: "CONFIRMED",
+        },
+      })
+
+      // Jika tidak ada booking CONFIRMED lain, tandai kamar sebagai tersedia
+      if (activeBookings === 0 && !booking.room.isAvailable) {
+        await prisma.room.update({
+          where: { id: booking.roomId },
+          data: { isAvailable: true },
+        })
+      }
+
+      // Revalidate halaman publik
+      revalidatePath("/rooms", "page")
+      if (booking.room.slug) {
+        revalidatePath(`/rooms/${booking.room.slug}`, "page")
+      }
+      revalidateTag("rooms")
+      revalidateTag(`room-${booking.room.id}`)
+    }
+
+    return NextResponse.json(
+      { message: "Booking berhasil dihapus" },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    )
+  } catch (error) {
+    console.error("Error deleting booking:", error)
+    return NextResponse.json({ error: "Gagal menghapus booking" }, { status: 500 })
   }
 }
