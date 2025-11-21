@@ -35,9 +35,14 @@ export function Navbar() {
         <div className="flex justify-between items-center h-16 relative">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="font-bold text-xl text-gray-900">
-              AKA KOST
-            </span>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-2xl bg-red-600 flex items-center justify-center shadow-md shadow-red-200">
+                <Building2 className="h-5 w-5 text-white" strokeWidth={2.2} />
+              </div>
+              <span className="font-bold text-xl text-gray-900">
+                AKA <span className="text-red-600">KOST</span>
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Navigation - Center dengan titik pemisah */}
