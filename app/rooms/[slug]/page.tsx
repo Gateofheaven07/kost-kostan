@@ -10,6 +10,10 @@ import { prisma } from "@/lib/prisma"
 import { syncRoomAvailability } from "@/lib/sync-room-availability"
 import { Wifi, Users, DoorOpen, MapPin, Bath } from "lucide-react"
 
+// Make this page dynamic to avoid build-time database access
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface RoomDetailPageProps {
   params: Promise<{ slug: string }>
 }
@@ -17,17 +21,24 @@ interface RoomDetailPageProps {
 export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
   const { slug } = await params
 
-  // Sync room availability first to ensure accurate status
-  await syncRoomAvailability()
+  let room = null
+  
+  try {
+    // Sync room availability first to ensure accurate status
+    await syncRoomAvailability()
 
-  const room = await prisma.room.findUnique({
-    where: { slug },
-    include: {
-      images: true,
-      prices: true,
-      kost: true,
-    },
-  })
+    room = await prisma.room.findUnique({
+      where: { slug },
+      include: {
+        images: true,
+        prices: true,
+        kost: true,
+      },
+    })
+  } catch (error) {
+    console.error("Error fetching room data:", error)
+    notFound()
+  }
 
   if (!room) {
     notFound()

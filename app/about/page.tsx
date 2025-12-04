@@ -5,10 +5,22 @@ import { prisma } from "@/lib/prisma"
 import Image from "next/image"
 import { Building2, MapPin, Phone, Mail, MessageCircle, CheckCircle2, Sparkles, Users, Shield } from "lucide-react"
 
+// Make this page dynamic to avoid build-time database access
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function AboutPage() {
-  // Fetch kost and owner data
-  const kost = await prisma.kost.findFirst()
-  const owner = await prisma.owner.findFirst()
+  // Fetch kost and owner data with error handling
+  let kost = null
+  let owner = null
+  
+  try {
+    kost = await prisma.kost.findFirst()
+    owner = await prisma.owner.findFirst()
+  } catch (error) {
+    console.error("Error fetching kost/owner data:", error)
+    // Continue with null values, page will still render without data
+  }
 
   // Parse facilities dengan handle nested array
   let facilities: string[] = []

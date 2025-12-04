@@ -2,13 +2,28 @@ import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DoorOpen, Calendar, CheckCircle, Clock } from "lucide-react"
 
+// Make this page dynamic to avoid build-time database access
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function AdminDashboard() {
-  const [totalRooms, pendingBookings, confirmedBookings, totalUsers] = await Promise.all([
-    prisma.room.count(),
-    prisma.booking.count({ where: { status: "PENDING" } }),
-    prisma.booking.count({ where: { status: "CONFIRMED" } }),
-    prisma.user.count({ where: { role: "USER" } }),
-  ])
+  // Fetch stats with error handling
+  let totalRooms = 0
+  let pendingBookings = 0
+  let confirmedBookings = 0
+  let totalUsers = 0
+
+  try {
+    [totalRooms, pendingBookings, confirmedBookings, totalUsers] = await Promise.all([
+      prisma.room.count(),
+      prisma.booking.count({ where: { status: "PENDING" } }),
+      prisma.booking.count({ where: { status: "CONFIRMED" } }),
+      prisma.user.count({ where: { role: "USER" } }),
+    ])
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error)
+    // Continue with zero values, page will still render
+  }
 
   const stats = [
     { label: "Total Kamar", value: totalRooms, icon: DoorOpen },

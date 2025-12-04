@@ -9,14 +9,25 @@ import { Button } from "@/components/ui/button"
 import { Calendar, Clock, DollarSign, MapPin, Package, FileText, ArrowRight, CheckCircle2, XCircle, Hourglass } from "lucide-react"
 import Image from "next/image"
 
+// Make this page dynamic to avoid build-time database access
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function BookingsPage() {
   const session = await requireAuth()
 
-  const bookings = await prisma.booking.findMany({
-    where: { userId: session.user.id },
-    include: { room: true },
-    orderBy: { createdAt: "desc" },
-  })
+  let bookings = []
+  
+  try {
+    bookings = await prisma.booking.findMany({
+      where: { userId: session.user.id },
+      include: { room: true },
+      orderBy: { createdAt: "desc" },
+    })
+  } catch (error) {
+    console.error("Error fetching bookings:", error)
+    // Continue with empty array, page will still render
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {

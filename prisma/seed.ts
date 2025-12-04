@@ -1,7 +1,18 @@
-import { PrismaClient } from "@prisma/client"
+import "dotenv/config"
+import { prisma } from "../lib/prisma"
 import bcrypt from "bcryptjs"
+import { generateRoomId } from "../lib/utils"
 
-const prisma = new PrismaClient()
+// Helper function untuk ekstrak nomor kamar dari nama
+function extractRoomNumber(name: string): number {
+  const match = name.match(/(\d+)$/)
+  return match ? parseInt(match[1], 10) : 1
+}
+
+// Helper function untuk mendapatkan nama kamar tanpa nomor
+function getRoomNameWithoutNumber(name: string): string {
+  return name.replace(/\s+\d+$/, '').trim()
+}
 
 async function main() {
   console.log("🌱 Mulai seeding database...")
@@ -164,10 +175,19 @@ async function main() {
 
   for (const roomData of rooms) {
     const { prices, ...roomInfo } = roomData
+    // Ekstrak nomor kamar dari nama
+    const roomNumber = extractRoomNumber(roomInfo.name)
+    // Dapatkan nama kamar tanpa nomor untuk generateRoomId
+    const roomNameWithoutNumber = getRoomNameWithoutNumber(roomInfo.name)
+    // Generate idRoom dengan format: INISIAL-LANTAI-NOMOR (contoh: KP-01-101)
+    const idRoom = generateRoomId(roomNameWithoutNumber, roomInfo.floor, roomNumber)
+    
     const room = await prisma.room.create({
       data: {
         ...roomInfo,
         kostId: kost.id,
+        roomNumber,
+        idRoom,
         isAvailable: true,
       },
     })
