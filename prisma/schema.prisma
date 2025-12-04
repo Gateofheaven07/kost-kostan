@@ -63,6 +63,8 @@ model Room {
   kostId        String
   slug          String   @unique
   name          String
+  idRoom        String   @unique
+  roomNumber    Int
   size          String   // e.g., "3x4m"
   floor         Int
   capacity      Int

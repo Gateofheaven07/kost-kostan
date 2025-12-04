@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth-utils"
 import { prisma } from "@/lib/prisma"
+import { generateRoomId } from "@/lib/utils"
 import { type NextRequest, NextResponse } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 
@@ -29,12 +30,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
 
     const body = await request.json()
-    const { name, floor, capacity, size, facilities, isAvailable, mainImageUrl, prices } = body
+    const { name, floor, roomNumber, capacity, size, facilities, isAvailable, mainImageUrl, prices } = body
 
     // Validate required fields
-    if (!name || !floor || !capacity || !size) {
+    if (!name || !floor || !capacity || !size || !roomNumber) {
       return NextResponse.json(
-        { error: "Nama, lantai, kapasitas, dan ukuran harus diisi" },
+        { error: "Nama, nomor kamar, lantai, kapasitas, dan ukuran harus diisi" },
         { status: 400 }
       )
     }
@@ -95,11 +96,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Admin can now safely update the room status
+    const idRoom = generateRoomId(name, Number(floor), Number(roomNumber))
+
     await prisma.room.update({
       where: { id },
       data: {
         name,
         floor: Number(floor),
+        roomNumber: Number(roomNumber),
+        idRoom,
         capacity: Number(capacity),
         size,
         facilities: JSON.stringify(facilitiesArray),

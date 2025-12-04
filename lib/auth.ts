@@ -14,22 +14,42 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) {
+            console.warn("[auth][credentials] Missing email or password", {
+              email: credentials?.email,
+            })
             throw new Error("Email dan password diperlukan")
           }
+
+          console.log("[auth][credentials] Login attempt", {
+            email: credentials.email,
+          })
 
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
           })
 
           if (!user) {
+            console.warn("[auth][credentials] User not found for email", {
+              email: credentials.email,
+            })
             throw new Error("Email atau password salah")
           }
 
           const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash)
 
           if (!isPasswordValid) {
+            console.warn("[auth][credentials] Invalid password for email", {
+              email: credentials.email,
+              userId: user.id,
+            })
             throw new Error("Email atau password salah")
           }
+
+          console.log("[auth][credentials] Login success", {
+            email: user.email,
+            id: user.id,
+            role: user.role,
+          })
 
           return {
             id: user.id,
@@ -39,7 +59,7 @@ export const authOptions: NextAuthOptions = {
             phone: user.phone || undefined,
           }
         } catch (error) {
-          console.error("[v0] Authorization error:", error)
+          console.error("[auth][credentials] Authorization error:", error)
           throw error
         }
       },

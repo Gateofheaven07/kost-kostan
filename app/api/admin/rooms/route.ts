@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth-utils"
 import { prisma } from "@/lib/prisma"
+import { generateRoomId } from "@/lib/utils"
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { revalidatePath, revalidateTag } from "next/cache"
@@ -66,6 +67,7 @@ function formatFacilities(raw: string | null): string {
 
 const roomSchema = z.object({
   name: z.string().min(1),
+  roomNumber: z.number().positive(),
   floor: z.number().positive(),
   capacity: z.number().positive(),
   size: z.string(),
@@ -101,16 +103,29 @@ export async function POST(request: NextRequest) {
     await requireAdmin()
 
     const body = await request.json()
-    const { name, floor, capacity, size, facilities, isAvailable, mainImageUrl, prices } = roomSchema.parse(body)
+    const { name, roomNumber, floor, capacity, size, facilities, isAvailable, mainImageUrl, prices } =
+      roomSchema.parse(body)
 
-    // Generate slug
+    // Generate slug & idRoom
     const slug = name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now()
+    const idRoom = generateRoomId(name, floor, roomNumber)
+
+    const kost = await prisma.kost.findFirst()
+    if (!kost) {
+      console.error("[admin][rooms][POST] Tidak ada data kost. Harap jalankan inisialisasi database terlebih dahulu.")
+      return NextResponse.json(
+        { error: "Data kost belum diinisialisasi. Silakan jalankan inisialisasi database terlebih dahulu." },
+        { status: 400 },
+      )
+    }
 
     const room = await prisma.room.create({
       data: {
-        kostId: (await prisma.kost.findFirst())?.id || "",
+        kostId: kost.id,
         slug,
         name,
+        idRoom,
+        roomNumber,
         floor,
         capacity,
         size,
@@ -123,7 +138,7 @@ export async function POST(request: NextRequest) {
             amount: amount as number,
           })),
         },
-      },
+      } as any,
       include: { prices: true },
     })
 
@@ -144,9 +159,18 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
+    console.error("[admin][rooms][POST] Error saat membuat kamar:", error)
+
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Data tidak valid" }, { status: 400 })
     }
-    return NextResponse.json({ error: "Gagal membuat kamar" }, { status: 500 })
+
+    return NextResponse.json(
+      {
+        error: "Gagal membuat kamar",
+        details: process.env.NODE_ENV === "development" ? String(error) : undefined,
+      },
+      { status: 500 },
+    )
   }
 }

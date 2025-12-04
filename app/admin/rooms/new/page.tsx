@@ -17,6 +17,7 @@ export default function NewRoomPage() {
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState({
     name: "",
+    roomNumber: 101,
     floor: 1,
     capacity: 1,
     size: "",
@@ -78,7 +79,14 @@ export default function NewRoomPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    createRoomMutation.mutate(formData)
+    // Pastikan nilai numerik dikirim sebagai number ke backend (sesuai schema Zod)
+    const payload = {
+      ...formData,
+      floor: Number(formData.floor),
+      capacity: Number(formData.capacity),
+      roomNumber: Number(formData.roomNumber),
+    }
+    createRoomMutation.mutate(payload as typeof formData)
   }
 
   return (
@@ -94,7 +102,7 @@ export default function NewRoomPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Nama Kamar</label>
                 <Input name="name" value={formData.name} onChange={handleChange} placeholder="Kamar 101" required />
@@ -102,6 +110,18 @@ export default function NewRoomPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Lantai</label>
                 <Input name="floor" type="number" value={formData.floor} onChange={handleChange} min="1" required />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Nomor Kamar</label>
+                <Input
+                  name="roomNumber"
+                  type="number"
+                  value={formData.roomNumber}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                  placeholder="101"
+                />
               </div>
             </div>
 
