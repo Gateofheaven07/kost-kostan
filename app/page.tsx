@@ -5,8 +5,25 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { RoomsCarousel } from "@/components/rooms-carousel"
 import { MapPin, Wifi, Shield, Users, Bed, Bath, Square, ArrowRight } from "lucide-react"
+import { prisma } from "@/lib/prisma"
 
-export default function Home() {
+export const dynamic = 'force-dynamic'
+
+export default async function Home() {
+  // Fetch promo data
+  const promo = await prisma.promo.findFirst()
+  
+  const promoData = promo || {
+    title: "Premium Room",
+    description: "Kamar Tidur, Kamar Mandi, 20 m²",
+    price: 1000000,
+    period: "/bulan",
+    features: "Kamar Tidur, Kamar Mandi, 20 m²",
+    isActive: true
+  }
+
+  const featuresList = promoData.features.split(",").map(f => f.trim())
+
   return (
     <>
       <Navbar />
@@ -53,42 +70,34 @@ export default function Home() {
               {/* Right Side - Elegant 3D Cards dengan Shadow yang Halus */}
               <div className="relative lg:h-[600px] flex items-center justify-center">
                 {/* Premium Room Card - Main Focus */}
-                <div className="relative z-20 transform hover:scale-105 transition-transform duration-300">
-                  <Card className="bg-white shadow-2xl border border-gray-100 w-72 rounded-xl overflow-hidden">
-                    <CardHeader className="bg-gradient-to-br from-red-50 to-white pb-3">
-                      <div className="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wide">Tipe Kamar</div>
-                      <CardTitle className="text-2xl font-bold text-gray-900">Premium Room</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-4">
-                      <div className="space-y-3 text-sm text-gray-700">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center">
-                            <Bed className="h-4 w-4 text-red-600" />
+                {promoData.isActive && (
+                  <div className="relative z-20 transform hover:scale-105 transition-transform duration-300">
+                    <Card className="bg-white shadow-2xl border border-gray-100 w-72 rounded-xl overflow-hidden">
+                      <CardHeader className="bg-gradient-to-br from-red-50 to-white pb-3">
+                        <div className="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wide">Tipe Kamar</div>
+                        <CardTitle className="text-2xl font-bold text-gray-900">{promoData.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-4">
+                        <div className="space-y-3 text-sm text-gray-700">
+                          {featuresList.map((feature, index) => (
+                            <div key={index} className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center shrink-0">
+                                <Square className="h-4 w-4 text-red-600" />
+                              </div>
+                              <span className="font-medium">{feature}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="pt-4 border-t border-gray-100">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-bold text-red-600">Rp {promoData.price.toLocaleString('id-ID')}</span>
+                            <span className="text-xs text-gray-500">{promoData.period}</span>
                           </div>
-                          <span className="font-medium">Kamar Tidur</span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center">
-                            <Bath className="h-4 w-4 text-red-600" />
-                          </div>
-                          <span className="font-medium">Kamar Mandi</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-red-600/10 flex items-center justify-center">
-                            <Square className="h-4 w-4 text-red-600" />
-                          </div>
-                          <span className="font-medium">20 m²</span>
-                        </div>
-                      </div>
-                      <div className="pt-4 border-t border-gray-100">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-2xl font-bold text-red-600">Rp 1.000.000</span>
-                          <span className="text-xs text-gray-500">/bulan</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {/* Status Card - Bottom Left dengan elegant shadow */}
                 <div className="absolute bottom-0 left-0 z-10 transform rotate-[-3deg] hover:rotate-[-1deg] transition-transform duration-300">

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,6 +31,15 @@ interface OwnerSettings {
   socials: string
 }
 
+interface PromoSettings {
+  title: string
+  description: string
+  price: number
+  period: string
+  features: string
+  isActive: boolean
+}
+
 export default function SettingsPage() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -57,16 +66,30 @@ export default function SettingsPage() {
     socials: "",
   })
 
-  const { isLoading: loading } = useQuery({
+  const [promoData, setPromoData] = useState<PromoSettings>({
+    title: "",
+    description: "",
+    price: 0,
+    period: "",
+    features: "",
+    isActive: true,
+  })
+
+  const { isLoading: loading, isError } = useQuery({
     queryKey: ["admin-settings"],
     queryFn: async () => {
-      const [kostRes, ownerRes] = await Promise.all([
+      const [kostRes, ownerRes, promoRes] = await Promise.all([
         fetch("/api/admin/settings/kost"),
         fetch("/api/admin/settings/owner"),
+        fetch("/api/admin/settings/promo"),
       ])
 
+      let kost = null
+      let owner = null
+      let promo = null
+
       if (kostRes.ok) {
-        const kost = await kostRes.json()
+        kost = await kostRes.json()
         setKostData({
           ...kost,
           facilities: Array.isArray(kost.facilities) ? kost.facilities.join(", ") : kost.facilities,
@@ -74,23 +97,31 @@ export default function SettingsPage() {
       }
 
       if (ownerRes.ok) {
-        const owner = await ownerRes.json()
+        owner = await ownerRes.json()
         setOwnerData({
           ...owner,
           socials: typeof owner.socials === "string" ? owner.socials : JSON.stringify(owner.socials),
         })
       }
 
-      return { kost: kostRes.ok ? await kostRes.json() : null, owner: ownerRes.ok ? await ownerRes.json() : null }
+      if (promoRes.ok) {
+        promo = await promoRes.json()
+        setPromoData(promo)
+      }
+
+      return { kost, owner, promo }
     },
-    onError: () => {
+  })
+
+  useEffect(() => {
+    if (isError) {
       toast({
         title: "Error",
         description: "Gagal memuat pengaturan",
         variant: "destructive",
       })
-    },
-  })
+    }
+  }, [isError, toast])
 
   const handleKostChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -100,6 +131,14 @@ export default function SettingsPage() {
   const handleOwnerChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setOwnerData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handlePromoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target
+    setPromoData((prev) => ({ 
+      ...prev, 
+      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value 
+    }))
   }
 
   const updateKostMutation = useMutation({
@@ -151,6 +190,32 @@ export default function SettingsPage() {
     },
   })
 
+  const updatePromoMutation = useMutation({
+    mutationFn: async (data: PromoSettings) => {
+      const response = await fetch("/api/admin/settings/promo", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          price: Number(data.price),
+        }),
+      })
+      if (!response.ok) throw new Error("Failed to update promo settings")
+      return response.json()
+    },
+    onSuccess: () => {
+      toast({ title: "Berhasil", description: "Pengaturan promo berhasil disimpan" })
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] })
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Gagal menyimpan pengaturan",
+        variant: "destructive",
+      })
+    },
+  })
+
   const handleKostSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     updateKostMutation.mutate(kostData)
@@ -159,6 +224,11 @@ export default function SettingsPage() {
   const handleOwnerSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     updateOwnerMutation.mutate(ownerData)
+  }
+
+  const handlePromoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    updatePromoMutation.mutate(promoData)
   }
 
   if (loading) {
@@ -307,6 +377,84 @@ export default function SettingsPage() {
 
             <Button type="submit" disabled={updateOwnerMutation.isPending}>
               {updateOwnerMutation.isPending ? "Menyimpan..." : "Simpan Pengaturan Pemilik"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Promo Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Promo Card (Landing Page)</CardTitle>
+          <CardDescription>Kelola tampilan kartu promo di halaman utama</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePromoSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Judul Promo</label>
+              <Input name="title" value={promoData.title} onChange={handlePromoChange} required />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Deskripsi (Fasilitas Singkat)</label>
+              <textarea
+                name="description"
+                value={promoData.description}
+                onChange={handlePromoChange}
+                rows={2}
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Harga</label>
+                <Input 
+                  name="price" 
+                  type="number" 
+                  value={promoData.price} 
+                  onChange={handlePromoChange} 
+                  required 
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Periode</label>
+                <Input 
+                  name="period" 
+                  value={promoData.period} 
+                  onChange={handlePromoChange} 
+                  placeholder="/bulan" 
+                  required 
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Fitur Lengkap (pisahkan dengan koma)</label>
+              <textarea
+                name="features"
+                value={promoData.features}
+                onChange={handlePromoChange}
+                rows={3}
+                placeholder="WiFi Gratis, Keamanan 24/7, Lokasi Strategis"
+                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isActive"
+                checked={promoData.isActive}
+                onChange={handlePromoChange}
+                id="isActive"
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="isActive" className="text-sm font-medium">Tampilkan Promo</label>
+            </div>
+
+            <Button type="submit" disabled={updatePromoMutation.isPending}>
+              {updatePromoMutation.isPending ? "Menyimpan..." : "Simpan Pengaturan"}
             </Button>
           </form>
         </CardContent>

@@ -194,3 +194,15 @@ model Message {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+model Promo {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  price       Int
+  period      String   // e.g., "/bulan"
+  features    String   // JSON array or comma separated
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -102,7 +102,11 @@ export function AdminSidebar() {
           variant="destructive"
           className="w-full justify-start"
           size="sm"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => {
+            if (confirm("Apakah Anda yakin ingin keluar?")) {
+              signOut({ callbackUrl: "/" })
+            }
+          }}
         >
           <LogOut className="mr-2 h-4 w-4" />
           Logout

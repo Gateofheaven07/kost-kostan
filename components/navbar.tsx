@@ -139,7 +139,11 @@ export function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    onClick={() => {
+                      if (confirm("Apakah Anda yakin ingin keluar?")) {
+                        signOut({ callbackUrl: "/" })
+                      }
+                    }}
                     className="cursor-pointer text-red-600 focus:text-red-600"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
@@ -213,7 +217,11 @@ export function Navbar() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
-                      onClick={() => signOut({ callbackUrl: "/" })}
+                      onClick={() => {
+                        if (confirm("Apakah Anda yakin ingin keluar?")) {
+                          signOut({ callbackUrl: "/" })
+                        }
+                      }}
                       className="cursor-pointer text-red-600 focus:text-red-600"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
