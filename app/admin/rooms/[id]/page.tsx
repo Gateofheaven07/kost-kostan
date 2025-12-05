@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { X, Upload } from "lucide-react"
 
 interface Room {
   id: string
@@ -47,6 +48,37 @@ export default function EditRoomPage() {
     },
   })
   const [isFormInitialized, setIsFormInitialized] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploading(true)
+    const formData = new FormData()
+    formData.append("file", file)
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) throw new Error("Upload failed")
+
+      const data = await response.json()
+      setFormData((prev) => ({ ...prev, mainImageUrl: data.url }))
+      toast({ title: "Berhasil", description: "Gambar berhasil diupload" })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal mengupload gambar",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const { data: room, isLoading: loading } = useQuery<Room>({
     queryKey: ["admin-room", roomId],
@@ -246,13 +278,50 @@ export default function EditRoomPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">URL Gambar Utama</label>
-              <Input
-                name="mainImageUrl"
-                value={formData.mainImageUrl}
-                onChange={handleChange}
-                placeholder="https://..."
-              />
+              <label className="text-sm font-medium mb-2 block">Foto Kamar</label>
+              <div className="flex flex-col gap-4">
+                {formData.mainImageUrl && (
+                  <div className="relative w-full h-48 bg-muted rounded-md overflow-hidden border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={formData.mainImageUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, mainImageUrl: "" }))}
+                      className="absolute top-2 right-2 p-1 bg-destructive text-white rounded-full hover:bg-destructive/90 shadow-sm"
+                      title="Hapus gambar"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+                
+                <div className="flex gap-2 items-center">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                    className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                  />
+                  {isUploading && <span className="text-sm text-muted-foreground animate-pulse">Mengupload...</span>}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    Atau masukkan URL gambar secara manual:
+                  </div>
+                  <Input
+                    name="mainImageUrl"
+                    value={formData.mainImageUrl}
+                    onChange={handleChange}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
             </div>
 
             <div>

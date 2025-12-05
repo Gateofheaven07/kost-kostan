@@ -42,6 +42,16 @@ export default function BookingPage() {
       return
     }
 
+    if (session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN") {
+      toast({
+        title: "Akses Ditolak",
+        description: "Admin tidak dapat melakukan booking kamar.",
+        variant: "destructive",
+      })
+      router.push("/")
+      return
+    }
+
     if (!roomId) {
       router.push("/rooms")
       return

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { prisma } from "@/lib/prisma"
 import { syncRoomAvailability } from "@/lib/sync-room-availability"
+import { getSession } from "@/lib/auth-utils"
 import { Wifi, Users, DoorOpen, MapPin, Bath } from "lucide-react"
 
 interface RoomDetailPageProps {
@@ -16,6 +17,8 @@ interface RoomDetailPageProps {
 
 export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
   const { slug } = await params
+  const session = await getSession()
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN"
 
   // Sync room availability first to ensure accurate status
   await syncRoomAvailability()
@@ -214,9 +217,20 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
                   </div>
 
                   {room.isAvailable ? (
-                    <Link href={`/booking?roomId=${room.id}`} className="w-full">
-                      <Button className="w-full">Mulai Sewa</Button>
-                    </Link>
+                    isAdmin ? (
+                      <div className="space-y-2">
+                        <Button className="w-full" disabled>
+                          Admin Tidak Bisa Booking
+                        </Button>
+                        <p className="text-sm text-muted-foreground text-center">
+                          Admin tidak diizinkan melakukan pemesanan kamar
+                        </p>
+                      </div>
+                    ) : (
+                      <Link href={`/booking?roomId=${room.id}`} className="w-full">
+                        <Button className="w-full">Mulai Sewa</Button>
+                      </Link>
+                    )
                   ) : (
                     <div className="space-y-2">
                       <Button className="w-full" disabled>

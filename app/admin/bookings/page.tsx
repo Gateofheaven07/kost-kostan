@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Trash2 } from "lucide-react"
+import { Trash2, Eye } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
+import Link from "next/link"
 
 interface Booking {
   id: string
@@ -272,6 +273,16 @@ export default function BookingsPage() {
                               </Button>
                             </>
                           )}
+                          <Link href={`/admin/bookings/${booking.id}`}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-blue-500 text-blue-500 hover:bg-blue-50"
+                              title="Lihat Detail"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
                           <Button
                             size="sm"
                             variant="outline"

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
-import { LayoutDashboard, DoorOpen, Calendar, Users, Settings, LogOut, Home, Shield } from "lucide-react"
+import { LayoutDashboard, DoorOpen, Calendar, Users, Settings, LogOut, Home, Shield, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ const menuItems = [
   { href: "/admin/rooms", label: "Kamar", icon: DoorOpen, superAdminOnly: false },
   { href: "/admin/bookings", label: "Booking", icon: Calendar, superAdminOnly: false },
   { href: "/admin/tenants", label: "Penyewa", icon: Users, superAdminOnly: false },
+  { href: "/admin/messages", label: "Pesan", icon: MessageSquare, superAdminOnly: false },
   { href: "/admin/admins", label: "Admins", icon: Shield, superAdminOnly: true },
   { href: "/admin/settings", label: "Pengaturan", icon: Settings, superAdminOnly: false },
 ]
