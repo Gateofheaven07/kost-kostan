@@ -158,8 +158,9 @@ export default function SignInPage() {
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="••••••••"
+                  placeholder={isSignUp ? "Minimal 8 karakter" : "••••••••"}
                   required
+                  minLength={isSignUp ? 8 : undefined}
                 />
                 <button
                   type="button"
