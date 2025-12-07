@@ -11,6 +11,8 @@ import { syncRoomAvailability } from "@/lib/sync-room-availability"
 import { getSession } from "@/lib/auth-utils"
 import { Wifi, Users, DoorOpen, MapPin, Bath } from "lucide-react"
 
+import { RoomBookingButton } from "@/components/room-booking-button"
+
 interface RoomDetailPageProps {
   params: Promise<{ slug: string }>
 }
@@ -19,6 +21,7 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
   const { slug } = await params
   const session = await getSession()
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN"
+  const isAuthenticated = !!session
 
   // Sync room availability first to ensure accurate status
   await syncRoomAvailability()
@@ -227,9 +230,7 @@ export default async function RoomDetailPage({ params }: RoomDetailPageProps) {
                         </p>
                       </div>
                     ) : (
-                      <Link href={`/booking?roomId=${room.id}`} className="w-full">
-                        <Button className="w-full">Mulai Sewa</Button>
-                      </Link>
+                      <RoomBookingButton roomId={room.id} isAuthenticated={isAuthenticated} />
                     )
                   ) : (
                     <div className="space-y-2">
