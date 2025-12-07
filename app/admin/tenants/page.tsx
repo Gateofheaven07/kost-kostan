@@ -1,9 +1,22 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import { Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface User {
   id: string
@@ -15,6 +28,7 @@ interface User {
 
 export default function TenantsPage() {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   const { data: users = [], isLoading: loading } = useQuery<User[]>({
     queryKey: ["admin-tenants"],
@@ -27,6 +41,33 @@ export default function TenantsPage() {
       toast({
         title: "Error",
         description: "Gagal memuat data penyewa",
+        variant: "destructive",
+      })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/admin/tenants/${id}`, {
+        method: "DELETE",
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to delete tenant")
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-tenants"] })
+      toast({
+        title: "Berhasil",
+        description: "Penyewa berhasil dihapus",
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: "Gagal",
+        description: error.message,
         variant: "destructive",
       })
     },
@@ -56,6 +97,7 @@ export default function TenantsPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Telepon</TableHead>
                     <TableHead>Tanggal Daftar</TableHead>
+                    <TableHead className="w-[100px]">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -66,6 +108,32 @@ export default function TenantsPage() {
                       <TableCell>{user.email}</TableCell>
                       <TableCell>{user.phone || "-"}</TableCell>
                       <TableCell>{new Date(user.createdAt).toLocaleDateString("id-ID")}</TableCell>
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon" disabled={deleteMutation.isPending}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Hapus Penyewa?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tindakan ini tidak dapat dibatalkan. Data penyewa <strong>{user.name}</strong> akan dihapus permanen dari sistem.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => deleteMutation.mutate(user.id)}
+                              >
+                                {deleteMutation.isPending ? "Menghapus..." : "Hapus"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
